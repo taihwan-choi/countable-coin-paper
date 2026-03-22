@@ -1,0 +1,289 @@
+{
+  "timestamp": "2026-03-22T01:30:29.106Z",
+  "runs": 10,
+  "rawCD": "0x000000010134fdf500000001abcdef01abcdef01abcdef01abcdef01abcdef01abcdef01abcdef01abcdef01",
+  "records": [
+    {
+      "path": "(A) STD.transfer",
+      "run": 1,
+      "gasUsed": 52198
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 2,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 3,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 4,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 5,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 6,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 7,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 8,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 9,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(A) STD.transfer",
+      "run": 10,
+      "gasUsed": 35098
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 1,
+      "gasUsed": 53317
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 2,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 3,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 4,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 5,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 6,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 7,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 8,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 9,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "run": 10,
+      "gasUsed": 36217
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 1,
+      "gasUsed": 59577
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 2,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 3,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 4,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 5,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 6,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 7,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 8,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 9,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "run": 10,
+      "gasUsed": 42477
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 1,
+      "gasUsed": 58975
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 2,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 3,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 4,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 5,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 6,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 7,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 8,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 9,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "run": 10,
+      "gasUsed": 41875
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 1,
+      "gasUsed": 72707
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 2,
+      "gasUsed": 55619
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 3,
+      "gasUsed": 55619
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 4,
+      "gasUsed": 55607
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 5,
+      "gasUsed": 55619
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 6,
+      "gasUsed": 55607
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 7,
+      "gasUsed": 55619
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 8,
+      "gasUsed": 55619
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 9,
+      "gasUsed": 55619
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "run": 10,
+      "gasUsed": 55607
+    }
+  ],
+  "summary": [
+    {
+      "path": "(A) STD.transfer",
+      "avgGas": 36808,
+      "vsERC20": 0,
+      "pct": 0
+    },
+    {
+      "path": "(B) Wrapper.transferWithCD",
+      "avgGas": 37927,
+      "vsERC20": 1119,
+      "pct": 3.04
+    },
+    {
+      "path": "(C) Minimal.transferWithCD",
+      "avgGas": 44187,
+      "vsERC20": 7379,
+      "pct": 20.05
+    },
+    {
+      "path": "(D) CNC.transferWithCD",
+      "avgGas": 43585,
+      "vsERC20": 6777,
+      "pct": 18.41
+    },
+    {
+      "path": "(E) CNC.transferWithCDSigned",
+      "avgGas": 57324,
+      "vsERC20": 20516,
+      "pct": 55.74
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "countable-coin-paper",
+  "version": "1.0.0",
+  "description": "Countable Coin — On-Chain Accounting Semantic Layer. Reproduction code for IEEE ICBC / BCCA paper.",
+  "keywords": [
+    "ethereum",
+    "erc20",
+    "blockchain",
+    "accounting",
+    "semantic-finality",
+    "smart-contract",
+    "hardhat",
+    "solidity"
+  ],
+  "author": "Countable Coin Research",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/countable-coin-paper.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "preinstall": "echo 'If install fails, run: npm install --legacy-peer-deps'",
+
+    "compile":       "hardhat compile",
+    "test":          "hardhat test",
+    "clean":         "hardhat clean",
+
+    "node":          "hardhat node",
+
+    "deploy:local":  "hardhat run scripts/deploy_local.js --network localhost",
+    "setup:local":   "hardhat run scripts/setup_local.js  --network localhost",
+    "emit:local":    "hardhat run scripts/emit_local.js   --network localhost",
+
+    "benchmark":     "hardhat run scripts/benchmark_table2.js --network localhost",
+    "gas:compare":   "hardhat run scripts/gas_compare.js      --network localhost",
+
+    "watcher":       "node watcher/index.js",
+    "dashboard":     "node dashboard/server.js",
+    "wallet-ui":     "node wallet-ui/server.js",
+
+    "check:repo":    "bash check_repo.sh"
+  },
+  "devDependencies": {
+    "hardhat": "^2.28.6",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "better-sqlite3": "^9.0.0",
+    "dotenv": "^16.0.0",
+    "ethers": "^6.0.0",
+    "express": "^4.18.0",
+    "node-fetch": "^2.7.0"
+  }
+}
