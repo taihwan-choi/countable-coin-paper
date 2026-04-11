@@ -31,7 +31,7 @@
 ## 2. 저장소 설치
 
 ```bash
-git clone https://github.com/countable-coin-research/countable-coin-paper.git
+git clone https://github.com/taihwan-choi/countable-coin-paper.git
 cd countable-coin-paper
 npm install
 ```
