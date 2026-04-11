@@ -108,13 +108,13 @@ npx hardhat test
 
 For a step-by-step local workflow, see:
 
-- `REPRODUCIBILITY.md`
+* `REPRODUCIBILITY.md`
 
 ## Benchmark notes
 
 For benchmark interpretation and path descriptions, see:
 
-- `BENCHMARK.md`
+* `BENCHMARK.md`
 
 ## Current scope and limitations
 
@@ -122,10 +122,10 @@ This repository is a **research-demo artifact**, not a production-ready payment 
 
 Current limitations include:
 
-- minimal local watcher scope
-- no production-grade privacy layer
-- no end-to-end enterprise integration stack
-- no production hardening beyond the demo paths included here
+* minimal local watcher scope
+* no production-grade privacy layer
+* no end-to-end enterprise integration stack
+* no production hardening beyond the demo paths included here
 
 Privacy-preserving extensions, broader interoperability, and richer enterprise integrations are future work.
 

@@ -1,3 +1,4 @@
+
 # Benchmark Notes
 
 This document explains the purpose and interpretation of the benchmark paths in the Countable Coin research-demo repository.
@@ -6,11 +7,11 @@ This document explains the purpose and interpretation of the benchmark paths in 
 
 The benchmark is intended to compare the relative gas overhead of different transfer paths, including:
 
-- a baseline ERC-20 path
-- a wrapper-only path
-- a minimal semantic validation path
-- an enterprise semantic validation path
-- a signed enterprise path, where applicable
+* a baseline ERC-20 path
+* a wrapper-only path
+* a minimal semantic validation path
+* an enterprise semantic validation path
+* a signed enterprise path, where applicable
 
 The goal is not to claim a production gas model, but to show how semantic validation and policy enforcement affect execution cost in a controlled research-demo setting.
 
@@ -40,9 +41,9 @@ Where measured separately, this path includes signed transfer support with signe
 
 Benchmark results should be interpreted carefully.
 
-- The first run may include cold-access effects.
-- Later runs may better represent warm execution.
-- Exact gas values can vary depending on environment, compiler settings, and benchmark setup.
+* The first run may include cold-access effects.
+* Later runs may better represent warm execution.
+* Exact gas values can vary depending on environment, compiler settings, and benchmark setup.
 
 For this reason, the benchmark should be read as a comparative research-demo measurement rather than a definitive production gas study.
 
