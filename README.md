@@ -4,73 +4,75 @@
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-orange)](contracts/CountableCoin.sol)
 [![Hardhat](https://img.shields.io/badge/Hardhat-v2-yellow)](hardhat.config.js)
 
-> **논문 보조 저장소** — IEEE ICBC / BCCA 제출 논문  
+> **Research artifact repository** — companion code for the paper  
 > *"Semantic Finality: Enforcing Accounting Meaning in ERC-20 Token Transfers"*  
-> 재현 가능한 스마트컨트랙트 구현체 및 가스 벤치마크 코드를 제공합니다.
+> (submitted to IEEE ICBC / BCCA)  
+> Provides reproducible smart-contract implementations and a five-path gas benchmark.
 
 ---
 
-## 🔍 이 저장소가 무엇인가요?
+## Overview
 
-일반 ERC-20 토큰은 **금액·송수신자**만 기록합니다.  
-Countable Coin은 여기에 **44바이트 Countable Data** 페이로드를 결합해, 전송 실행 시점에 회계 의미(계정코드·날짜·세금코드·문서해시)를 온체인에서 검증·기록합니다.
+Standard ERC-20 tokens record only the transferred amount and the two counterparties. Countable Coin extends this by embedding a fixed-size **44-byte Countable Data** payload in every transfer call, enabling **execution-time semantic validation** of accounting fields — account code, booking date, tax code, and a document hash — directly on-chain.
 
-이를 통해 ERP 시스템이 수동 대사(reconciliation) 없이 온체인 이벤트만으로 분개 처리를 자동화할 수 있습니다.
+This design allows ERP systems to consume on-chain `TransferWithCD` events for automated journal-entry generation without any manual reconciliation step.
 
-### Countable Data Schema (Table I, 44 bytes fixed)
+---
+
+## Countable Data Schema (Table I — 44 bytes, fixed)
 
 | Offset | Field | Type | Size | Description |
 |--------|-------|------|------|-------------|
-| 0–3 | `accountCode` | uint32 | 4 B | IAS 1 원장 계정 코드 |
-| 4–7 | `bookingDate` | uint32 | 4 B | YYYYMMDD 보고 기간 |
-| 8–11 | `taxCode` | uint32 | 4 B | VAT/GST 세금 코드 |
-| 12–43 | `documentHash` | bytes32 | 32 B | IAS 8 / SOX 증빙 문서 해시 |
+| 0–3 | `accountCode` | uint32 | 4 B | IAS 1 general-ledger account code (non-zero) |
+| 4–7 | `bookingDate` | uint32 | 4 B | Reporting period in YYYYMMDD format (calendar-validated) |
+| 8–11 | `taxCode` | uint32 | 4 B | VAT / GST tax classification code (non-zero) |
+| 12–43 | `documentHash` | bytes32 | 32 B | Source-document hash per IAS 8 / SOX (non-zero) |
 
 ---
 
-## 🏗️ 시스템 아키텍처
+## System Architecture
 
 ```
-① 스마트컨트랙트          ② 워처(Watcher)           ③ SQLite DB
-┌──────────────┐  이벤트  ┌──────────────────┐  저장  ┌──────────────┐
-│ CountableCoin│ ──────► │ watcher/index.js │ ─────► │ events.db    │
-│ .sol         │          │ 이벤트 리스닝    │        │ (로컬 저장)  │
-└──────────────┘          └──────────────────┘        └──────────────┘
-  transferWithCD()          실시간 수집·파싱
-  TransferWithCD 이벤트     이벤트 필드 저장
+① Smart Contract           ② Watcher                  ③ SQLite DB
+┌──────────────┐  events  ┌──────────────────┐  store  ┌──────────────┐
+│ CountableCoin│ ────────►│ watcher/index.js │ ───────►│ events.db    │
+│ .sol         │           │ event subscriber │         │ (local)      │
+└──────────────┘           └──────────────────┘         └──────────────┘
+  transferWithCD()            parse & persist
+  TransferWithCD event        to SQLite
 ```
 
-**데이터 흐름:**
-1. 클라이언트가 `transferWithCD()`를 호출 → 컨트랙트가 의미 검증 후 `TransferWithCD` 이벤트 방출
-2. 워처가 `TransferWithCD` 이벤트를 구독 → 파싱된 필드를 SQLite(`events.db`)에 저장 (로컬 연구 데모용 최소 구현)
-3. 대시보드가 SQLite DB를 읽어 브라우저에서 이벤트 목록·집계를 표시
+**Data flow:**
+1. Client calls `transferWithCD()` → contract performs execution-time semantic validation, then emits a `TransferWithCD` event with all seven decoded fields.
+2. Watcher subscribes to `TransferWithCD` events → stores parsed fields in SQLite (`events.db`). This is a minimal local research-demo implementation.
+3. Dashboard reads SQLite and displays the event list and field-level aggregates in the browser.
 
 ---
 
-## 📁 폴더 구조
+## Repository Structure
 
 ```
 countable-coin-paper/
 ├── contracts/
-│   ├── StandardToken.sol          # ERC-20 baseline
-│   ├── CountableCoinWrapper.sol   # Wrapper path (no semantic validation)
-│   ├── MinimalCountableCoin.sol   # Minimal semantic path
-│   └── CountableCoin.sol          # Enterprise path (allowlist + EIP-712)
+│   ├── StandardToken.sol          # ERC-20 baseline (Path A)
+│   ├── CountableCoinWrapper.sol   # Passthrough wrapper — no validation (Path B)
+│   ├── MinimalCountableCoin.sol   # Execution-time semantic validation only (Path C)
+│   └── CountableCoin.sol          # Enterprise path: allowlist + EIP-712 (Paths D/E)
 ├── scripts/
-│   ├── deploy_local.js            # Deploy all contracts
-│   ├── setup_local.js             # Initialize DB and controls
-│   ├── emit_local.js              # Emit test events
-│   ├── benchmark_table2.js        # Gas benchmark (Table II)
-│   └── gas_compare.js             # Simple gas comparison
+│   ├── deploy_local.js            # Deploy all four contracts
+│   ├── setup_local.js             # Configure allowlist, account/tax codes, signer
+│   ├── emit_local.js              # Emit test events against a running local node
+│   ├── benchmark_table2.js        # Five-path gas benchmark (reproduces Table II)
+│   └── gas_compare.js             # Simplified ERC-20 vs transferWithCD comparison
 ├── watcher/
-│   └── index.js                   # Event listener and SQLite storage
+│   └── index.js                   # Event subscriber and SQLite storage
 ├── dashboard/
-│   ├── server.js                  # REST API for transfers/gas stats
-│   └── public/index.html          # Simple HTML dashboard
+│   ├── server.js                  # REST API backed by SQLite
+│   └── public/index.html          # Simple event-viewer UI
 ├── test/
-│   └── CountableCoin.test.js      # Unit tests
+│   └── CountableCoin.test.js      # Unit tests — 15 cases across all four contract paths
 ├── results/
-│   └── benchmark_raw.json         # Benchmark results
+│   └── benchmark_raw.json         # Pre-generated benchmark data for paper reproduction
 ├── hardhat.config.js
 ├── package.json
 ├── README.md
@@ -81,129 +83,144 @@ countable-coin-paper/
 
 ---
 
-## ⚙️ 사전 준비사항
+## Prerequisites
 
-| 도구 | 필요 버전 | 확인 명령어 |
-|------|----------|------------|
-| Node.js | 18.x 이상 (20.x 권장) | `node --version` |
-| npm | 9.x 이상 | `npm --version` |
-| Git | 아무 버전 | `git --version` |
+| Tool | Required version | Verify |
+|------|-----------------|--------|
+| Node.js | 18.x or later (20.x recommended) | `node --version` |
+| npm | 9.x or later | `npm --version` |
+| Git | any | `git --version` |
 
-> **Windows 사용자:** WSL2 (Ubuntu 22.04+) 환경을 권장합니다.
+> **Windows users:** WSL2 (Ubuntu 22.04+) is strongly recommended.
 
 ---
 
-## 🚀 빠른 시작 (Quick Start)
+## Quick Start
 
-### 1단계 — 저장소 클론 및 의존성 설치
+### Step 1 — Clone and install
 
 ```bash
-git clone https://github.com/countable-coin-research/countable-coin-paper.git
+git clone https://github.com/taihwan-choi/countable-coin-paper.git
 cd countable-coin-paper
-
 npm install
 ```
 
-### 2단계 — 환경 변수 설정
+### Step 2 — Configure environment
 
 ```bash
 cp .env.example .env
-# .env 파일은 배포 후 COIN_ADDR 값만 채우면 됩니다
-# (아래 3단계 참고)
+# Set COIN_ADDR after deployment (Step 3)
 ```
 
-### 3단계 — 로컬 블록체인 실행 및 배포
+### Step 3 — Start a local blockchain and deploy
 
-**터미널 A** (계속 켜 둠):
+**Terminal A** (keep running):
 ```bash
 npx hardhat node
 ```
 
-**터미널 B**:
+**Terminal B**:
 ```bash
-# 컴파일
 npm run compile
-
-# 배포
-npm run deploy:local
-# → 출력된 COIN_ADDR를 .env에 붙여넣기
-
-# allowlist + signer 초기 설정 (필수!)
-npm run setup:local
+npm run deploy:local     # note the printed contract address; paste into .env as COIN_ADDR
+npm run setup:local      # configure allowlist, account/tax codes, and authorized signer
 ```
 
-### 4단계 — 워처 + 대시보드 실행
+### Step 4 — Start the watcher and dashboard
 
-**터미널 C**:
+**Terminal C**:
 ```bash
 npm run watcher
 ```
 
-**터미널 D**:
+**Terminal D**:
 ```bash
 npm run dashboard
-# → 브라우저: http://localhost:8088
+# open http://localhost:8088 in your browser
 ```
 
-### 5단계 — 이벤트 발행 테스트
+### Step 5 — Emit test events
 
-**터미널 B**:
+**Terminal B**:
 ```bash
 npm run emit:local
-# → 터미널 C에 TransferWithCD 이벤트 로그 확인
+# Terminal C should log incoming TransferWithCD events
 ```
 
 ---
 
-## 📊 벤치마크 실행
+## Unit Tests
 
-5경로(A~E) 가스 측정 → `results/benchmark_raw.json` 자동 생성:
+```bash
+npm test
+```
+
+All 15 test cases pass on the Hardhat in-process network. Coverage includes:
+
+- Plain ERC-20 transfer (`StandardToken`)
+- Passthrough transfer with arbitrary payload (`CountableCoinWrapper`)
+- Semantic validation — valid payload, invalid length, missing fields, invalid date (`MinimalCountableCoin`)
+- Allowlist enforcement, account/tax-code enforcement, valid EIP-712 signed transfer, and replay / expiry / unauthorized-signer rejection (`CountableCoin`)
+
+---
+
+## Benchmark
+
+Full five-path gas measurement (reproduces Table II):
 
 ```bash
 npm run benchmark
 ```
 
-간단 비교 (ERC-20 vs transferWithCD):
+Quick two-path comparison (ERC-20 vs `transferWithCD`):
 
 ```bash
 npm run gas:compare
 ```
 
-자세한 내용은 [BENCHMARK.md](BENCHMARK.md)를 참고하세요.
+See [BENCHMARK.md](BENCHMARK.md) for the benchmark design, warm/cold methodology, and result interpretation.
 
 ---
 
-## 📈 기대 결과 예시
+## Expected Results
 
 ```
-✅ results/benchmark_raw.json 저장 완료
-
- Path A (ERC-20 baseline)    : 35,098 gas   +0.00%
- Path B (wrapper passthrough): 36,217 gas   +3.19%
- Path C (minimal semantic)   : 42,477 gas  +21.02%
- Path D (allowlist)          : 41,875 gas  +19.31%
- Path E (EIP-712 + nonce)    : 55,614 gas  +58.45%
+Path A  ERC-20 baseline       :  35,098 gas   +0.00%
+Path B  Lightweight Carriage  :  36,217 gas   +3.19%
+Path C  Observable Semantic   :  42,477 gas  +21.02%
+Path D  Allowlist Path        :  41,875 gas  +19.31%
+Path E  Signed Enterprise     :  55,614 gas  +58.45%
 ```
 
-3 Operating Points:
+Three operating points identified in the paper:
 
-| 경로 | 명칭 | 오버헤드 | 적합 시나리오 |
-|------|------|----------|--------------|
-| B | Lightweight Carriage | +3.19% | 가스 최우선, 오프체인 파싱 |
-| C | Observable Semantic | +21.02% | ERP 직접 소비, 권장 배포 |
-| E | Signed Enterprise | +58.45% | 내부통제 서명, 프로덕션 |
+| Path | Label | Overhead | Recommended when |
+|------|-------|----------|-----------------|
+| B | Lightweight Carriage | +3.19% | Gas cost is the primary constraint; payload parsed off-chain |
+| C | Observable Semantic | +21.02% | Direct ERP consumption; **recommended default** |
+| E | Signed Enterprise | +58.45% | Internal-control signature required; regulatory environments |
 
----
-
-## ⚠️ 주의사항
-
-- `.env` 파일에는 실제 개인키나 메인넷 RPC URL을 넣지 마세요.
-- 이 저장소는 **로컬 Hardhat 네트워크** 기준으로 작성되었습니다.
-- Sepolia 등 테스트넷 배포 시에는 `.env`에 적절한 `PRIVATE_KEY`와 `RPC_URL`을 설정하세요.
-- `node_modules/`, `.env`, `logs/`, `data/`, `artifacts/`, `cache/`는 절대 커밋하지 마세요.
+All paths execute in O(1) — no unbounded loops on the transfer path.
 
 ---
 
-## 📄 라이선스
+## Security Notes
+
+- Do **not** commit `.env` or any file containing real private keys or mainnet RPC URLs.
+- This repository targets **local Hardhat networks** only.
+- For testnet deployment, set `PRIVATE_KEY` and `RPC_URL` in `.env` appropriately.
+- `node_modules/`, `.env`, `artifacts/`, and `cache/` must never be committed.
+
+---
+
+## License
 
 [MIT License](LICENSE) — © 2026 Countable Coin Research
+
+---
+
+## 한국어 요약
+
+이 저장소는 *"Semantic Finality: ERC-20 토큰 전송에 회계 의미를 강제하기"* 논문의 재현 코드입니다.  
+Countable Coin은 44바이트 **Countable Data** 페이로드를 ERC-20 전송에 결합하여, 실행 시점에 계정코드·날짜·세금코드·문서해시를 온체인에서 검증합니다.  
+5경로(A~E) 가스 벤치마크와 단위 테스트 15개가 포함되어 있으며, `npm install && npm test`로 즉시 실행 가능합니다.
