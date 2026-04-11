@@ -12,15 +12,15 @@
 | **A** | ERC-20 Baseline | MinimalCountableCoin | `transfer()` | 표준 ERC-20 전송만 |
 | **B** | Lightweight Carriage | WrapperContract | `transferWithCD()` | 44B calldata ABI 인코딩만, 이벤트 없음 |
 | **C** | Observable Semantic | MinimalCountableCoin | `transferWithCD()` | 시맨틱 검증 + 7-field 분해 이벤트 |
-| **D** | Allowlist Path | CountableCoin | `transferWithCD()` | Path C + allowlist SLOAD 검사 |
+| **D** | Allowlist Path | CountableCoin | `transferWithCD()` | Path C + allowlist + accountCode/taxCode checks |
 | **E** | Signed Enterprise | CountableCoin | `transferWithCD()` | Path D + EIP-712 ecrecover + nonce SSTORE |
 
 ### 각 경로의 의미
 
 - **Path A**: 비교 기준선. 순수 ERC-20 `transfer()` 가스.
-- **Path B**: payload를 calldata로 전달만 하고 emit하지 않는 경우. "얼마나 가볍게 할 수 있나?" 기준.
+- **Path B**: payload를 calldata로 전달만 하고 검증하지 않는 경우. "얼마나 가볍게 할 수 있나?" 기준.
 - **Path C**: ERP가 직접 소비할 수 있는 7-field 분해 이벤트를 방출하는 권장 배포 경로.
-- **Path D**: Path C에 allowedAccountCode/allowedTaxCode SLOAD 검사 추가.
+- **Path D**: Path C에 allowlist, allowedAccountCode, allowedTaxCode 검사 추가.
 - **Path E**: 완전한 프로덕션 경로. EIP-712 서명 검증 + 시그너 nonce SSTORE 포함.
 
 ---

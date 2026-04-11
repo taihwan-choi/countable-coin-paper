@@ -31,13 +31,13 @@ Countable Coin은 여기에 **44바이트 Countable Data** 페이로드를 결�
 ## 🏗️ 시스템 아키텍처
 
 ```
-① 스마트컨트랙트          ② 워처(Watcher)           ③ ERP 수신기(옵션)    ④ 대시보드
-┌──────────────┐  이벤트  ┌──────────────────┐  웹훅  ┌──────────────┐   ┌───────────┐
-│ CountableCoin│ ──────► │ watcher/index.js │ ─────► │ ERP System   │   │ dashboard │
-│ .sol         │          │ JSONL + SQLite   │        │ (외부 연동)  │   │ /server   │
-└──────────────┘          └──────────────────┘        └──────────────┘   └───────────┘
-  transferWithCD()          2초 폴링 수집                POST /webhook      브라우저 확인
-  TransferWithCD 이벤트     이벤트 파싱·저장
+① 스마트컨트랙트          ② 워처(Watcher)           ③ SQLite DB
+┌──────────────┐  이벤트  ┌──────────────────┐  저장  ┌──────────────┐
+│ CountableCoin│ ──────► │ watcher/index.js │ ─────► │ events.db    │
+│ .sol         │          │ 이벤트 리스닝    │        │ (로컬 저장)  │
+└──────────────┘          └──────────────────┘        └──────────────┘
+  transferWithCD()          실시간 수집·파싱
+  TransferWithCD 이벤트     이벤트 필드 저장
 ```
 
 **데이터 흐름:**
@@ -52,33 +52,30 @@ Countable Coin은 여기에 **44바이트 Countable Data** 페이로드를 결�
 ```
 countable-coin-paper/
 ├── contracts/
-│   ├── CountableCoin.sol          # 메인 컨트랙트 (EIP-712 + allowlist + nonce)
-│   └── MinimalCountableCoin.sol   # 벤치마크용 최소 시맨틱 컨트랙트 (Path C)
+│   ├── StandardToken.sol          # ERC-20 baseline
+│   ├── CountableCoinWrapper.sol   # Wrapper path (no semantic validation)
+│   ├── MinimalCountableCoin.sol   # Minimal semantic path
+│   └── CountableCoin.sol          # Enterprise path (allowlist + EIP-712)
 ├── scripts/
-│   ├── deploy_local.js            # 로컬 배포
-│   ├── setup_local.js             # allowlist + signer 초기 설정
-│   ├── emit_local.js              # 이벤트 발행 테스트
-│   ├── benchmark_table2.js        # 논문 Table II — 5경로 가스 측정
-│   ├── gas_compare.js             # ERC-20 vs transferWithCD() 간단 비교
-│   └── fund_metamask.js           # MetaMask 지갑 토큰 충전
-├── watcher/                       # 이벤트 수집 파이프라인
-│   ├── index.js                   # 실행 엔트리
-│   ├── config.js / abi.js / parse.js / jsonlSink.js / webhookSink.js
-│   ├── chain/                     # RPC 연결·폴링
-│   └── db/                        # SQLite 연결·스키마·쿼리
+│   ├── deploy_local.js            # Deploy all contracts
+│   ├── setup_local.js             # Initialize DB and controls
+│   ├── emit_local.js              # Emit test events
+│   ├── benchmark_table2.js        # Gas benchmark (Table II)
+│   └── gas_compare.js             # Simple gas comparison
+├── watcher/
+│   └── index.js                   # Event listener and SQLite storage
 ├── dashboard/
-│   ├── server.js                  # Express REST API
-│   └── public/index.html          # 브라우저 대시보드
-├── wallet-ui/
-│   ├── server.js
-│   └── public/index.html          # MetaMask 연동 전송 UI
-├── results/                       # 벤치마크 결과 JSON (git-tracked)
-├── .env.example                   # 환경변수 템플릿 (실제값 없음)
+│   ├── server.js                  # REST API for transfers/gas stats
+│   └── public/index.html          # Simple HTML dashboard
+├── test/
+│   └── CountableCoin.test.js      # Unit tests
+├── results/
+│   └── benchmark_raw.json         # Benchmark results
 ├── hardhat.config.js
 ├── package.json
 ├── README.md
-├── REPRODUCIBILITY.md             # 재현 절차 상세
-├── BENCHMARK.md                   # 벤치마크 경로·결과 설명
+├── REPRODUCIBILITY.md
+├── BENCHMARK.md
 └── LICENSE
 ```
 
@@ -101,7 +98,7 @@ countable-coin-paper/
 ### 1단계 — 저장소 클론 및 의존성 설치
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/countable-coin-paper.git
+git clone https://github.com/countable-coin-research/countable-coin-paper.git
 cd countable-coin-paper
 
 npm install
@@ -153,7 +150,7 @@ npm run dashboard
 **터미널 B**:
 ```bash
 npm run emit:local
-# → 터미널 C에 [evt] local 12.34 cUSD acc: 1001 tax: 10 출력 확인
+# → 터미널 C에 TransferWithCD 이벤트 로그 확인
 ```
 
 ---
@@ -192,9 +189,9 @@ npm run gas:compare
 
 | 경로 | 명칭 | 오버헤드 | 적합 시나리오 |
 |------|------|----------|--------------|
-| B | Lightweight Semantic Carriage | +3.19% | 가스 최우선, 오프체인 파싱 |
-| C | Observable Semantic Path | +21.02% | ERP 직접 소비, 권장 배포 |
-| E | Signed Enterprise Path | +58.45% | 내부통제 서명, 프로덕션 |
+| B | Lightweight Carriage | +3.19% | 가스 최우선, 오프체인 파싱 |
+| C | Observable Semantic | +21.02% | ERP 직접 소비, 권장 배포 |
+| E | Signed Enterprise | +58.45% | 내부통제 서명, 프로덕션 |
 
 ---
 

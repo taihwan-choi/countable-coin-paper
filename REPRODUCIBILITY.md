@@ -31,7 +31,7 @@
 ## 2. 저장소 설치
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/countable-coin-paper.git
+git clone https://github.com/countable-coin-research/countable-coin-paper.git
 cd countable-coin-paper
 npm install
 ```
@@ -83,14 +83,9 @@ Started HTTP and WebSocket JSON-RPC server at http://127.0.0.1:8545/
 npm run deploy:local
 ```
 
-출력에서 `COIN_ADDR`를 복사해 `.env`에 반영:
+출력에서 주소 확인 (deployed_addresses.json에 저장됨).
 
-```bash
-cp .env.example .env
-# .env 열어서 COIN_ADDR=0x... 와 CHAINS_JSON의 contract 값을 같은 주소로 교체
-```
-
-초기 설정 (allowlist + signer 등록):
+초기 설정 (allowlist + account/tax codes + signer 등록):
 
 ```bash
 npm run setup:local
@@ -98,11 +93,10 @@ npm run setup:local
 
 기대 출력:
 ```
-[1/3] setAllowedAccountCode: [1001, 1002, 2001]   ✅
-[2/3] setAllowedTaxCode: [10, 20, 0]               ✅
-[3/3] setAuthorizedSigner: 0xf39F...               ✅
-allowedAccountCode(1001) = true
-✅ Setup complete
+[1/4] setAllowlist(alice, true) ✅
+[2/4] setAllowedAccountCode: [1001, 1002, 2001] ✅
+[3/4] setAllowedTaxCode: [10, 20, 0] ✅
+[4/4] setAuthorizedSigner(alice, true) ✅
 ```
 
 ---
@@ -116,7 +110,7 @@ npm run benchmark
 스크립트: `scripts/benchmark_table2.js`
 
 이 스크립트는:
-1. `MinimalCountableCoin`과 `CountableCoin` 두 컨트랙트를 배포합니다.
+1. `StandardToken`, `CountableCoinWrapper`, `MinimalCountableCoin`, `CountableCoin` 네 컨트랙트를 배포합니다.
 2. A/C/D/E 경로를 각 10회 측정합니다.
 3. `results/benchmark_raw.json`에 타임스탬프 포함 raw 데이터를 저장합니다.
 

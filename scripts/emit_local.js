@@ -24,8 +24,17 @@ async function main() {
   console.log("Emitting 5 × TransferWithCD events …");
 
   for (let i = 1; i <= 5; i++) {
-    // Pack a simple counter into a bytes32 countable-data field
-    const cd = hre.ethers.zeroPadValue(hre.ethers.toBeHex(i), 32);
+    // Pack a 44-byte countable-data payload
+    const accountCode = 1001;
+    const bookingDate = 20250101;
+    const taxCode = 10;
+    const documentHash = hre.ethers.keccak256(hre.ethers.toUtf8Bytes(`doc${i}`));
+    const cd = hre.ethers.concat([
+      hre.ethers.zeroPadValue(hre.ethers.toBeHex(accountCode), 4),
+      hre.ethers.zeroPadValue(hre.ethers.toBeHex(bookingDate), 4),
+      hre.ethers.zeroPadValue(hre.ethers.toBeHex(taxCode), 4),
+      documentHash,
+    ]);
     const tx = await cnc.connect(alice).transferWithCD(bob.address, amount, cd);
     const receipt = await tx.wait();
     console.log(`  [${i}/5] tx=${receipt.hash.slice(0,12)}… block=${receipt.blockNumber} gasUsed=${receipt.gasUsed.toString()}`);
