@@ -1,33 +1,26 @@
 # Reproducibility Guide
 
-This guide provides step-by-step instructions for independently reproducing the benchmark results reported in the paper. All figures were produced in the environment described below. A verbatim reproduction should yield warm-average gas costs of ±0 (±6 gas tolerance for Path E, as noted in the paper).
+This guide walks through the full local reproduction of the research demo: contract deployment, semantic transfer emission, watcher observation, and benchmark execution.
+
+All gas figures in the paper were produced in the reference environment described in §1. A verbatim reproduction should yield identical warm-average gas costs (±6 gas tolerance for Path E; see [BENCHMARK.md](BENCHMARK.md) for details).
 
 ---
 
-## 1. Reference Environment
+## 1. Environment
 
-| Item | Value |
-|------|-------|
+| Item | Reference value |
+|------|----------------|
 | OS | Ubuntu 22.04 LTS (WSL2 on Windows 11) |
-| Node.js | 22.x |
-| npm | 10.x |
+| Node.js | 22.x (≥ 18.x required) |
+| npm | 10.x (≥ 9.x required) |
 | Hardhat | 2.28.6 |
-| @nomicfoundation/hardhat-toolbox | 6.1.0 |
 | Solidity | 0.8.24 |
-| Optimizer | enabled, runs = 200 |
-| viaIR | true |
-| ethers.js | 6.x |
-| Network | Hardhat localhost (chainId 31337) |
-| Block gas limit | Hardhat default (30,000,000) |
-| Gas price | 1 gwei (Hardhat default) |
-| Measurement runs | 10 per path |
-| Warm average | runs 2–10 (n = 9); run 1 cold spike excluded |
-
-> **Cold-spike rationale:** Run 1 triggers a zero-to-nonzero SSTORE cold write on the recipient's ERC-20 balance slot, adding approximately +17,100 gas. Paper Table II reports warm averages (runs 2–10) only.
+| Optimizer | enabled, runs = 200, viaIR = true |
+| Network | Hardhat localhost, chainId 31337 |
 
 ---
 
-## 2. Installation
+## 2. Clone and install
 
 ```bash
 git clone https://github.com/taihwan-choi/countable-coin-paper.git
@@ -35,7 +28,7 @@ cd countable-coin-paper
 npm install
 ```
 
-If installation fails due to peer-dependency conflicts, retry with:
+If peer-dependency conflicts occur:
 
 ```bash
 npm install --legacy-peer-deps
@@ -43,23 +36,22 @@ npm install --legacy-peer-deps
 
 ---
 
-## 3. Compile Contracts
+## 3. Compile and test
 
 ```bash
-npm run compile
-# or: npx hardhat compile
+npx hardhat compile
+npx hardhat test
 ```
 
-Expected output:
-```
-Compiled 4 Solidity files successfully
-```
+Expected test output: **15 passing**
+
+The test suite covers all four contract paths and the full semantic validation logic: valid and invalid payload lengths, missing fields, invalid booking dates, allowlist enforcement, account/tax-code policy checks, EIP-712 signed transfer, and nonce replay rejection.
 
 ---
 
-## 4. Start a Local Node
+## 4. Start a local node
 
-In a dedicated terminal (keep running throughout all subsequent steps):
+Open a dedicated terminal and keep it running throughout the following steps:
 
 ```bash
 npx hardhat node
@@ -72,7 +64,7 @@ Started HTTP and WebSocket JSON-RPC server at http://127.0.0.1:8545/
 
 ---
 
-## 5. Deploy and Initialize
+## 5. Deploy contracts
 
 In a second terminal:
 
@@ -80,15 +72,21 @@ In a second terminal:
 npm run deploy:local
 ```
 
-Contract addresses are saved to `deployed_addresses.json`.
+This deploys all four contracts (`StandardToken`, `CountableCoinWrapper`, `MinimalCountableCoin`, `CountableCoin`) and writes their addresses to `deployed_addresses.json`.
 
-Configure allowlist, account codes, tax codes, and authorized signer:
+---
+
+## 6. Configure local policies
 
 ```bash
 npm run setup:local
 ```
 
-Expected output:
+This script:
+1. Creates the SQLite database schema (`events.db`) — `transfers` and `gas_stats` tables.
+2. Distributes 10,000 tokens of each contract type to the test accounts `alice` and `bob`.
+3. Configures `CountableCoin` policy controls:
+
 ```
 [1/4] setAllowlist(alice, true)                  ✅
 [2/4] setAllowedAccountCode: [1001, 1002, 2001]  ✅
@@ -98,70 +96,76 @@ Expected output:
 
 ---
 
-## 6. Run the Benchmark (reproduces Paper Table II)
+## 7. Emit a local semantic transfer
+
+```bash
+npm run emit:local
+```
+
+Sends five `transferWithCD` transactions from `alice` to `bob`, each carrying a valid 44-byte Countable Data payload (`accountCode=1001`, `bookingDate=20250101`, `taxCode=10`, `documentHash=keccak256("docN")`). Each transaction emits a structured `TransferWithCD` event.
+
+---
+
+## 8. Run the watcher
+
+```bash
+npm run watcher
+```
+
+The watcher (`watcher/index.js`):
+- Subscribes to `TransferWithCD` events on `CountableCoin` using an ethers.js JSON-RPC event listener
+- Also subscribes to standard `Transfer` events on both `CountableCoin` and `StandardToken`
+- Inserts all parsed event fields into the local SQLite database (`events.db`)
+
+It is a minimal local research-demo consumer. It does not use polling, a JSONL sink, or a webhook endpoint.
+
+After running `npm run emit:local`, the watcher console should log five `[TransferWithCD]` lines, one per emitted event.
+
+---
+
+## 9. Benchmark
+
+See [BENCHMARK.md](BENCHMARK.md) for full path definitions and result interpretation.
+
+**Five-path measurement (reproduces paper Table II):**
+
+Prerequisites: local node running (§4). The benchmark script deploys its own contract instances.
 
 ```bash
 npm run benchmark
-# or: npx hardhat run scripts/benchmark_table2.js --network localhost
 ```
 
-Script: `scripts/benchmark_table2.js`
+Output is written to `results/benchmark_raw.json`.
 
-This script:
-1. Deploys all four contracts (`StandardToken`, `CountableCoinWrapper`, `MinimalCountableCoin`, `CountableCoin`).
-2. Measures gas for paths A, C, D, and E — 10 runs each.
-3. Writes timestamped raw data to `results/benchmark_raw.json`.
+**Simplified two-path comparison:**
 
-> **Path B (Lightweight Carriage)** is measured separately:
-> ```bash
-> npm run gas:compare
-> ```
-
----
-
-## 7. Result Files
-
-| File | Contents |
-|------|----------|
-| `results/benchmark_raw.json` | 10-run raw gas data per path + summary statistics |
-
----
-
-## 8. Computing the Warm Average
-
-Paper Table II warm averages are computed from runs 2–10 only:
-
-```js
-const records = require('./results/benchmark_raw.json').records;
-const warm = records.filter(r => r.path === 'A' && r.run >= 2);
-const warmAvg = Math.round(warm.reduce((s, r) => s + r.gasUsed, 0) / warm.length);
+```bash
+npm run gas:compare
 ```
 
-Apply the same filter for paths B–E by changing the `path` selector.
+---
+
+## 10. Expected outcomes
+
+| Step | Expected result |
+|------|----------------|
+| `npx hardhat compile` | 4 contracts compiled successfully |
+| `npx hardhat test` | 15 tests passing |
+| `npm run deploy:local` | addresses written to `deployed_addresses.json` |
+| `npm run setup:local` | SQLite schema created; tokens distributed; CNC policies configured |
+| `npm run emit:local` | 5 `TransferWithCD` transactions confirmed on-chain |
+| `npm run watcher` (with emit) | 5 `[TransferWithCD]` rows inserted into `events.db` |
+| `npm run benchmark` | `results/benchmark_raw.json` written with warm avg ≈ 35,098 / 36,217 / 42,477 / 41,875 / 55,614 gas |
 
 ---
 
-## 9. Mapping to Paper Table II
-
-| Paper label | Repository path | Script | Warm avg (gas) | Overhead |
-|-------------|----------------|--------|---------------|---------|
-| ERC-20 baseline | Path A | benchmark_table2.js | 35,098 | 0.00% |
-| Lightweight Carriage | Path B | gas_compare.js | 36,217 | +3.19% |
-| Observable Semantic | Path C | benchmark_table2.js | 42,477 | +21.02% |
-| Allowlist Path | Path D | benchmark_table2.js | 41,875 | +19.31% |
-| Signed Enterprise | Path E | benchmark_table2.js | 55,614 | +58.45% |
-
-> Figures above correspond to `results/benchmark_raw.json` (timestamp: 2026-03-22T01:30:29Z).  
-> Warm averages should be ±0 on an identical environment; Path E allows ±6 gas due to nonce-slot alignment variance (stated in the paper).
-
----
-
-## 10. Common Issues
+## Common issues
 
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
+| `deployed_addresses.json not found` | `deploy:local` not run | Run `npm run deploy:local` first |
 | `HardFail: signer not authorized` | `setup:local` not run | Run `npm run setup:local` |
-| `HardFail: accountCode not in allowlist` | Allowlist not configured | Check code list in `scripts/setup_local.js` |
+| `HardFail: accountCode not in allowlist` | Allowlist not configured | Verify code list in `setup_local.js` |
 | Gas figures differ significantly | Hardhat version mismatch | Run `npm list hardhat` — expect 2.28.6 |
-| Run 1 is ~17,000 gas higher than runs 2–10 | Expected cold SSTORE spike | Use warm avg (runs 2–10 only) |
-| Path E shows ±6 gas variance across warm runs | Expected nonce-slot alignment difference | Within the stated tolerance |
+| Run 1 is ~17,000 gas higher | Expected cold SSTORE on recipient slot | Use warm average (runs 2–10) |
+| Path E ±6 gas variance in warm runs | Nonce slot odd/even alignment | Within stated tolerance |

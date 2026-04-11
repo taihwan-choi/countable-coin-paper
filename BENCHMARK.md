@@ -1,132 +1,119 @@
-# Gas Benchmark — Five-Path Analysis
+# Benchmark Notes
 
-This document describes the benchmark design, execution procedure, and result interpretation for the five-path gas overhead analysis of Countable Coin.
+This document describes the purpose, path definitions, methodology, and result interpretation for the five-path gas benchmark included in this repository.
 
 ---
 
-## 1. Path Definitions
+## Purpose
 
-| Path | Label | Contract | Method | Features included |
-|------|-------|---------|--------|------------------|
-| **A** | ERC-20 Baseline | `StandardToken` | `transfer()` | Standard ERC-20 transfer only |
-| **B** | Lightweight Carriage | `CountableCoinWrapper` | `transferWithCD()` | 44-byte calldata ABI encoding; no validation, no event |
-| **C** | Observable Semantic | `MinimalCountableCoin` | `transferWithCD()` | Execution-time semantic validation + seven-field decomposed event |
-| **D** | Allowlist Path | `CountableCoin` | `transferWithCD()` | Path C + allowlist + `accountCode`/`taxCode` enforcement |
-| **E** | Signed Enterprise Path | `CountableCoin` | `transferWithCDSigned()` | Path D + EIP-712 `ecrecover` + per-signer nonce SSTORE |
+The benchmark compares the gas cost of five transfer execution paths to quantify the incremental overhead introduced by:
+
+1. carrying the 44-byte Countable Data payload in calldata (wrapper path),
+2. performing execution-time semantic validation and emitting a structured event (minimal semantic path),
+3. adding on-chain policy enforcement via an allowlist and per-code checks (enterprise path), and
+4. adding EIP-712 typed-data signature verification with nonce-based replay protection (signed enterprise path).
+
+The goal is not to optimise for minimum gas, but to measure the cost of each semantic layer component so that deployment decisions can be made based on auditability and security requirements.
+
+---
+
+## Path definitions
+
+| Path | Label | Contract | Method | What it measures |
+|------|-------|---------|--------|-----------------|
+| **A** | ERC-20 Baseline | `StandardToken` | `transfer()` | Bare ERC-20 transfer cost — the comparison baseline |
+| **B** | Lightweight Carriage | `CountableCoinWrapper` | `transferWithCD()` | Cost of accepting a 44-byte payload in calldata with no validation or event |
+| **C** | Observable Semantic | `MinimalCountableCoin` | `transferWithCD()` | Execution-time semantic validation + seven-field `TransferWithCD` event |
+| **D** | Allowlist Path | `CountableCoin` | `transferWithCD()` | Path C plus on-chain allowlist and `accountCode`/`taxCode` policy checks |
+| **E** | Signed Enterprise Path | `CountableCoin` | `transferWithCDSigned()` | Path D plus EIP-712 `ecrecover` and per-signer nonce SSTORE |
 
 ### Path semantics
 
-- **Path A** — Pure ERC-20 transfer cost. The comparison baseline for all overhead calculations.
-- **Path B** — Forwards the 44-byte Countable Data payload as calldata without any validation or event emission. Establishes the minimum overhead of carrying the payload.
-- **Path C** — Recommended deployment path. Performs execution-time semantic validation and emits a fully-decomposed seven-field `TransferWithCD` event that an ERP system can consume directly, without off-chain parsing.
-- **Path D** — Adds on-chain allowlist and per-code (`accountCode`, `taxCode`) enforcement to Path C.
-- **Path E** — Full enterprise (signed) path. Extends Path D with EIP-712 typed-data signature verification and a per-signer nonce stored in contract state (SSTORE), enabling delegated execution with replay protection.
+- **Path A** is the cost floor. All overhead percentages are expressed relative to it.
+- **Path B** establishes the minimum cost of the Countable Data carriage mechanism, isolating calldata encoding from any validation logic.
+- **Path C** adds execution-time semantic validation: payload-length check, non-zero field checks, calendar-date validation, and a seven-field on-chain event. This path enables direct ERP event consumption without off-chain parsing.
+- **Path D** adds allowlist enforcement and per-code policy gates. It has slightly lower gas than Path C because the allowlist check short-circuits some validation branches.
+- **Path E** adds cryptographic accountability: a typed signature is verified with `ecrecover`, and the signer's nonce is incremented in contract storage. This enables delegated, auditable, replay-protected transfers.
 
 ---
 
-## 2. Overhead Decomposition (C − B = +6,260 gas)
+## Overhead decomposition (C − B = +6,260 gas)
 
-| Source | Gas delta | Share |
-|--------|-----------|-------|
+| Source | Gas | Share |
+|--------|-----|-------|
 | Seven-field `TransferWithCD` event | +2,780 | 44.4% |
 | 44-byte calldata ABI encoding | +992 | 15.8% |
-| Validation logic (four stages) | +430 | 6.9% |
+| Validation logic (four checks) | +430 | 6.9% |
 | Dispatch / stack / memory | +2,058 | 32.9% |
 | **Total** | **+6,260** | **100%** |
 
-> The B→C transition (+18 pp overhead) is the **cost of on-chain event indexing quality**.  
-> The C→E transition (+37 pp overhead) is the **cost of cryptographic accountability**.
+The B→C step (+18 percentage points) represents the cost of on-chain event indexing quality. The C→E step (+37 pp) represents the cost of cryptographic accountability.
 
 ---
 
-## 3. Running the Benchmark
-
-**Prerequisites:** a Hardhat local node must be running (see [REPRODUCIBILITY.md](REPRODUCIBILITY.md) §4).
-
-**Five-path measurement (reproduces Paper Table II):**
-
-```bash
-npm run benchmark
-# or: npx hardhat run scripts/benchmark_table2.js --network localhost
-```
-
-Output written to `results/benchmark_raw.json`.
-
-**Simplified two-path comparison (ERC-20 vs `transferWithCD`):**
-
-```bash
-npm run gas:compare
-# or: npx hardhat run scripts/gas_compare.js --network localhost
-```
-
----
-
-## 4. Measurement Methodology
-
-### Runs per path
-
-```
-RUNS = 10  (10 independent transactions per path)
-```
+## Interpretation
 
 ### Cold vs. warm runs
 
-| Run | Classification | Notes |
-|-----|---------------|-------|
-| Run 1 | Cold | Recipient balance slot: zero → nonzero SSTORE cold write (+17,100 gas) |
-| Runs 2–10 | Warm | Slot already initialized; results reflect steady-state execution cost |
+Each path is measured over 10 consecutive transactions. Run 1 is a **cold run**: the recipient's ERC-20 balance slot transitions from zero to non-zero, triggering a cold SSTORE that adds approximately +17,100 gas. Runs 2–10 are **warm runs** where the slot is already initialised.
 
-The paper reports **warm average = mean(runs 2–10), n = 9**.
-
-### Gas unit
-
-`receipt.gasUsed` — actual gas consumed by the transaction, inclusive of the 21,000-gas intrinsic cost.
+The paper reports **warm averages = mean(runs 2–10), n = 9**. Cold-run figures are included in the raw data for completeness but are excluded from the paper's Table II.
 
 ### Path E variance
 
-Warm runs of Path E exhibit ±6 gas variance. The cause is odd/even slot-alignment of the nonce SSTORE across successive calls. This variance is within the tolerance stated in the paper.
+Warm runs of Path E show ±6 gas variance caused by odd/even storage-slot alignment of the signer nonce across successive calls. This is within the stated tolerance.
+
+### Research-demo scope
+
+This benchmark is a research-demo comparison on a local Hardhat network. It is not a production gas study. Exact figures can differ from other EVM environments due to differences in:
+- EVM version and compiler optimisation settings
+- Block base fee and gas price model
+- Network congestion and transaction ordering
 
 ---
 
-## 5. Measured Results (2026-03-22, benchmark_raw.json)
+## Running the benchmark
 
-### Raw 10-run data
+**Prerequisites:** a local Hardhat node must be running (see [REPRODUCIBILITY.md §4](REPRODUCIBILITY.md#4-start-a-local-node)).
 
-| Path | Run 1 (cold) | Runs 2–10 (warm) | Warm avg | Std dev |
-|------|-------------|-----------------|---------|---------|
-| A | 52,198 | 35,098 × 9 | **35,098** | ±0 |
-| B | 53,317 | 36,217 × 9 | **36,217** | ±0 |
-| C | 59,577 | 42,477 × 9 | **42,477** | ±0 |
-| D | 58,975 | 41,875 × 9 | **41,875** | ±0 |
-| E | 72,707 | 55,607–55,619 | **55,614** | ±6 |
+```bash
+# Five-path measurement (reproduces paper Table II)
+npm run benchmark
+# or: npx hardhat run scripts/benchmark_table2.js --network localhost
 
-### Paper Table II
+# Simplified two-path comparison (ERC-20 vs transferWithCD)
+npm run gas:compare
+```
+
+---
+
+## Results
+
+Pre-generated results are stored in `results/benchmark_raw.json` (timestamp: 2026-03-22T01:30:29Z).
+
+### Warm averages (paper Table II)
 
 | Path | Method | Warm avg (gas) | vs ERC-20 | Overhead |
 |------|--------|---------------|-----------|---------|
-| A | `transfer()` — ERC-20 baseline | 35,098 | — | 0.00% |
-| B | `transferWithCD()` — passthrough | 36,217 | +1,119 | **+3.19%** |
-| C | `MinimalCountableCoin.transferWithCD()` | 42,477 | +7,379 | **+21.02%** |
-| D | `CountableCoin.transferWithCD()` | 41,875 | +6,777 | **+19.31%** |
-| E | `CountableCoin.transferWithCDSigned()` + EIP-712 | 55,614 | +20,516 | **+58.45%** |
+| A | `transfer()` | 35,098 | — | 0.00% |
+| B | `transferWithCD()` — passthrough | 36,217 | +1,119 | +3.19% |
+| C | `MinimalCountableCoin.transferWithCD()` | 42,477 | +7,379 | +21.02% |
+| D | `CountableCoin.transferWithCD()` | 41,875 | +6,777 | +19.31% |
+| E | `CountableCoin.transferWithCDSigned()` + EIP-712 | 55,614 | +20,516 | +58.45% |
+
+### Three operating points
+
+| Point | Path | Overhead | When to choose |
+|-------|------|---------|----------------|
+| Lightweight Carriage | B | +3.19% | Gas cost is the primary constraint; Countable Data is parsed off-chain |
+| Observable Semantic | C | +21.02% | On-chain auditability and direct ERP event consumption; **recommended default** |
+| Signed Enterprise | E | +58.45% | Delegated execution with cryptographic accountability; regulatory or internal-control context |
+
+All paths execute in O(1) — no unbounded loops on the transfer path.
 
 ---
 
-## 6. Three Operating Points
-
-> *"Semantic layer cost is tunable depending on auditability and security requirements."*
-
-| Operating point | Path | Warm gas | Overhead | Recommended when |
-|----------------|------|---------|---------|-----------------|
-| OP1 — Lightweight | B | 36,217 | +3.19% | Gas cost is the primary constraint; Countable Data parsed off-chain |
-| OP2 — Observable | C | 42,477 | +21.02% | Direct ERP event consumption; on-chain auditability; **recommended default** |
-| OP3 — Enterprise | E | 55,614 | +58.45% | Internal-control signature required; regulatory compliance context |
-
-All paths execute in O(1) — there are no unbounded loops on the transfer path.
-
----
-
-## 7. Output Schema (benchmark_raw.json)
+## Output schema (`benchmark_raw.json`)
 
 ```json
 {
@@ -147,5 +134,5 @@ All paths execute in O(1) — there are no unbounded loops on the transfer path.
 }
 ```
 
-> `summary.avgGas` in the generated file is the mean over all 10 runs (inclusive of the cold run 1).  
-> To replicate the paper's warm averages, filter `records` for `run >= 2` and compute the mean — see [REPRODUCIBILITY.md §8](REPRODUCIBILITY.md#8-computing-the-warm-average).
+> `summary.avgGas` is the mean over all 10 runs including the cold run 1.
+> To compute warm averages matching the paper, filter `records` for `run >= 2` and average the `gasUsed` values.

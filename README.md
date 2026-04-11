@@ -1,218 +1,150 @@
-# Countable Coin — On-Chain Accounting Semantic Layer
+# Countable Coin Paper
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-orange)](contracts/CountableCoin.sol)
 [![Hardhat](https://img.shields.io/badge/Hardhat-v2-yellow)](hardhat.config.js)
 
-> **Research artifact repository** — companion code for the paper  
-> *"Semantic Finality: Enforcing Accounting Meaning in ERC-20 Token Transfers"*  
-> (submitted to IEEE ICBC / BCCA)  
-> Provides reproducible smart-contract implementations and a five-path gas benchmark.
+This repository is a reproducible research-demo artifact for the paper *"Semantic Finality: Enforcing Accounting Meaning in ERC-20 Token Transfers"* (IEEE ICBC / BCCA). It provides four Solidity contract implementations that demonstrate **execution-time semantic validation** of token transfers using a fixed-length **Countable Data** payload, together with a five-path gas benchmark, a SQLite-backed event watcher, and a full unit-test suite.
 
 ---
 
-## Overview
+## What this repository demonstrates
 
-Standard ERC-20 tokens record only the transferred amount and the two counterparties. Countable Coin extends this by embedding a fixed-size **44-byte Countable Data** payload in every transfer call, enabling **execution-time semantic validation** of accounting fields — account code, booking date, tax code, and a document hash — directly on-chain.
-
-This design allows ERP systems to consume on-chain `TransferWithCD` events for automated journal-entry generation without any manual reconciliation step.
+- **Baseline ERC-20 transfer** — a plain `transfer()` call with no additional semantics (Path A)
+- **Wrapper-only path** — a `transferWithCD()` call that accepts the 44-byte payload but performs no validation (Path B)
+- **Minimal semantic validation path** — payload length, field presence, and booking-date validity are enforced on-chain at execution time (Path C)
+- **Enterprise path** — adds an allowlist, per-code policy checks, and EIP-712 signed transfer support to the semantic validation path (Paths D/E)
+- **Event consumption via a SQLite-backed watcher** — a minimal local subscriber that persists structured `TransferWithCD` event fields to a local SQLite database
 
 ---
 
-## Countable Data Schema (Table I — 44 bytes, fixed)
+## Core concept
+
+Standard ERC-20 transfers provide value transfer and ownership finality: they record an amount and two addresses, and nothing else. Countable Coin adds **structured transaction meaning** at execution time by requiring callers to supply a **Countable Data** payload with every transfer.
+
+The payload is exactly **44 bytes**, packed as:
 
 | Offset | Field | Type | Size | Description |
 |--------|-------|------|------|-------------|
-| 0–3 | `accountCode` | uint32 | 4 B | IAS 1 general-ledger account code (non-zero) |
-| 4–7 | `bookingDate` | uint32 | 4 B | Reporting period in YYYYMMDD format (calendar-validated) |
-| 8–11 | `taxCode` | uint32 | 4 B | VAT / GST tax classification code (non-zero) |
-| 12–43 | `documentHash` | bytes32 | 32 B | Source-document hash per IAS 8 / SOX (non-zero) |
+| 0–3 | `accountCode` | uint32 | 4 B | General-ledger account code (IAS 1); must be non-zero |
+| 4–7 | `bookingDate` | uint32 | 4 B | Reporting period in YYYYMMDD format; calendar-validated |
+| 8–11 | `taxCode` | uint32 | 4 B | VAT/GST tax classification code; must be non-zero |
+| 12–43 | `documentHash` | bytes32 | 32 B | Source-document hash (IAS 8 / SOX); must be non-zero |
+
+The semantic paths validate this payload on-chain at the point of execution. If any field is missing or invalid, the transaction reverts before any balance change occurs. This property — that the token transfer cannot complete without valid accounting metadata — is what the paper terms **semantic finality**.
 
 ---
 
-## System Architecture
+## Repository layout
 
 ```
-① Smart Contract           ② Watcher                  ③ SQLite DB
-┌──────────────┐  events  ┌──────────────────┐  store  ┌──────────────┐
-│ CountableCoin│ ────────►│ watcher/index.js │ ───────►│ events.db    │
-│ .sol         │           │ event subscriber │         │ (local)      │
-└──────────────┘           └──────────────────┘         └──────────────┘
-  transferWithCD()            parse & persist
-  TransferWithCD event        to SQLite
-```
+contracts/
+  StandardToken.sol          — baseline ERC-20 path (Path A)
+  CountableCoinWrapper.sol   — wrapper-only path, no semantic validation (Path B)
+  MinimalCountableCoin.sol   — minimal semantic validation path (Path C)
+  CountableCoin.sol          — enterprise path: semantic validation, policy checks,
+                               and signed transfer support (Paths D/E)
 
-**Data flow:**
-1. Client calls `transferWithCD()` → contract performs execution-time semantic validation, then emits a `TransferWithCD` event with all seven decoded fields.
-2. Watcher subscribes to `TransferWithCD` events → stores parsed fields in SQLite (`events.db`). This is a minimal local research-demo implementation.
-3. Dashboard reads SQLite and displays the event list and field-level aggregates in the browser.
+scripts/
+  deploy_local.js            — deploy all four contracts to a local Hardhat node
+  setup_local.js             — initialise SQLite schema, distribute test tokens,
+                               configure allowlist / account codes / tax codes / signer
+  emit_local.js              — send five test TransferWithCD transactions
+  benchmark_table2.js        — five-path gas benchmark (reproduces paper Table II)
+  gas_compare.js             — simplified two-path gas comparison
 
----
+test/
+  CountableCoin.test.js      — 15 unit tests covering all four contract paths
 
-## Repository Structure
+watcher/
+  index.js                   — SQLite-backed event subscriber for TransferWithCD
 
-```
-countable-coin-paper/
-├── contracts/
-│   ├── StandardToken.sol          # ERC-20 baseline (Path A)
-│   ├── CountableCoinWrapper.sol   # Passthrough wrapper — no validation (Path B)
-│   ├── MinimalCountableCoin.sol   # Execution-time semantic validation only (Path C)
-│   └── CountableCoin.sol          # Enterprise path: allowlist + EIP-712 (Paths D/E)
-├── scripts/
-│   ├── deploy_local.js            # Deploy all four contracts
-│   ├── setup_local.js             # Configure allowlist, account/tax codes, signer
-│   ├── emit_local.js              # Emit test events against a running local node
-│   ├── benchmark_table2.js        # Five-path gas benchmark (reproduces Table II)
-│   └── gas_compare.js             # Simplified ERC-20 vs transferWithCD comparison
-├── watcher/
-│   └── index.js                   # Event subscriber and SQLite storage
-├── dashboard/
-│   ├── server.js                  # REST API backed by SQLite
-│   └── public/index.html          # Simple event-viewer UI
-├── test/
-│   └── CountableCoin.test.js      # Unit tests — 15 cases across all four contract paths
-├── results/
-│   └── benchmark_raw.json         # Pre-generated benchmark data for paper reproduction
-├── hardhat.config.js
-├── package.json
-├── README.md
-├── REPRODUCIBILITY.md
-├── BENCHMARK.md
-└── LICENSE
+dashboard/
+  server.js                  — REST API backed by the SQLite database
+  public/index.html          — simple browser event viewer
+
+results/
+  benchmark_raw.json         — pre-generated benchmark data for paper reproduction
+
+REPRODUCIBILITY.md           — step-by-step reproduction guide
+BENCHMARK.md                 — benchmark design and result interpretation
 ```
 
 ---
 
-## Prerequisites
+## System architecture
 
-| Tool | Required version | Verify |
-|------|-----------------|--------|
-| Node.js | 18.x or later (20.x recommended) | `node --version` |
-| npm | 9.x or later | `npm --version` |
-| Git | any | `git --version` |
+The repository demonstrates the following local data flow:
 
-> **Windows users:** WSL2 (Ubuntu 22.04+) is strongly recommended.
+1. A client calls `transferWithCD()` on the contract.
+2. The contract validates the 44-byte Countable Data payload at execution time, then emits a structured `TransferWithCD` event containing all decoded accounting fields.
+3. The watcher (`watcher/index.js`) subscribes to `TransferWithCD` events using an ethers.js JSON-RPC provider.
+4. The watcher inserts the parsed event fields into a local SQLite database (`events.db`).
+
+The watcher is a minimal local research-demo consumer. It does not use polling, a JSONL sink, or a webhook.
 
 ---
 
-## Quick Start
+## Contract paths
 
-### Step 1 — Clone and install
+### `StandardToken` (Path A)
+A plain OpenZeppelin ERC-20 token. Used as the gas-cost baseline. Transfers carry no accounting metadata.
+
+### `CountableCoinWrapper` (Path B)
+Accepts a `bytes calldata` payload in `transferWithCD()` but ignores it entirely — no parsing, no validation, no event emission. Isolates the cost of carrying the 44-byte calldata field.
+
+### `MinimalCountableCoin` (Path C)
+Performs **execution-time semantic validation**: verifies payload length, checks that all required fields are non-zero, and validates the booking date against a calendar rule. Emits a seven-field `TransferWithCD` event on success. No allowlist or signature mechanism.
+
+### `CountableCoin` (Paths D/E)
+The **enterprise path**. Extends `MinimalCountableCoin` with:
+- An allowlist (`setAllowlist`) restricting which addresses may call `transferWithCD`
+- Per-code policy enforcement (`setAllowedAccountCode`, `setAllowedTaxCode`)
+- EIP-712 typed-data signed transfer (`transferWithCDSigned`) with per-signer nonces and a deadline, enabling delegated execution with replay protection
+
+---
+
+## Execution-time validation
+
+The semantic paths enforce the following checks before any token balance changes:
+
+- **Payload length** — exactly 44 bytes; reverts otherwise
+- **Non-zero required fields** — `accountCode`, `bookingDate`, `taxCode`, and `documentHash` must all be non-zero
+- **Date validity** — `bookingDate` must parse as a valid calendar date (YYYYMMDD) within the year range 2000–2100
+- **Policy checks** (enterprise path only) — `accountCode` and `taxCode` must appear in the on-chain allowlists configured by the contract owner
+- **Authorization and replay protection** (signed path only) — the EIP-712 signature must be from an authorized signer, the deadline must not have passed, and the nonce must not have been used before
+
+---
+
+## Quick start
 
 ```bash
 git clone https://github.com/taihwan-choi/countable-coin-paper.git
 cd countable-coin-paper
 npm install
+npx hardhat compile
+npx hardhat test
 ```
 
-### Step 2 — Configure environment
+For the full local demo (watcher + event emission), see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
-```bash
-cp .env.example .env
-# Set COIN_ADDR after deployment (Step 3)
-```
-
-### Step 3 — Start a local blockchain and deploy
-
-**Terminal A** (keep running):
-```bash
-npx hardhat node
-```
-
-**Terminal B**:
-```bash
-npm run compile
-npm run deploy:local     # note the printed contract address; paste into .env as COIN_ADDR
-npm run setup:local      # configure allowlist, account/tax codes, and authorized signer
-```
-
-### Step 4 — Start the watcher and dashboard
-
-**Terminal C**:
-```bash
-npm run watcher
-```
-
-**Terminal D**:
-```bash
-npm run dashboard
-# open http://localhost:8088 in your browser
-```
-
-### Step 5 — Emit test events
-
-**Terminal B**:
-```bash
-npm run emit:local
-# Terminal C should log incoming TransferWithCD events
-```
+For the gas benchmark, see [BENCHMARK.md](BENCHMARK.md).
 
 ---
 
-## Unit Tests
+## Current scope and limitations
 
-```bash
-npm test
-```
-
-All 15 test cases pass on the Hardhat in-process network. Coverage includes:
-
-- Plain ERC-20 transfer (`StandardToken`)
-- Passthrough transfer with arbitrary payload (`CountableCoinWrapper`)
-- Semantic validation — valid payload, invalid length, missing fields, invalid date (`MinimalCountableCoin`)
-- Allowlist enforcement, account/tax-code enforcement, valid EIP-712 signed transfer, and replay / expiry / unauthorized-signer rejection (`CountableCoin`)
-
----
-
-## Benchmark
-
-Full five-path gas measurement (reproduces Table II):
-
-```bash
-npm run benchmark
-```
-
-Quick two-path comparison (ERC-20 vs `transferWithCD`):
-
-```bash
-npm run gas:compare
-```
-
-See [BENCHMARK.md](BENCHMARK.md) for the benchmark design, warm/cold methodology, and result interpretation.
-
----
-
-## Expected Results
-
-```
-Path A  ERC-20 baseline       :  35,098 gas   +0.00%
-Path B  Lightweight Carriage  :  36,217 gas   +3.19%
-Path C  Observable Semantic   :  42,477 gas  +21.02%
-Path D  Allowlist Path        :  41,875 gas  +19.31%
-Path E  Signed Enterprise     :  55,614 gas  +58.45%
-```
-
-Three operating points identified in the paper:
-
-| Path | Label | Overhead | Recommended when |
-|------|-------|----------|-----------------|
-| B | Lightweight Carriage | +3.19% | Gas cost is the primary constraint; payload parsed off-chain |
-| C | Observable Semantic | +21.02% | Direct ERP consumption; **recommended default** |
-| E | Signed Enterprise | +58.45% | Internal-control signature required; regulatory environments |
-
-All paths execute in O(1) — no unbounded loops on the transfer path.
-
----
-
-## Security Notes
-
-- Do **not** commit `.env` or any file containing real private keys or mainnet RPC URLs.
-- This repository targets **local Hardhat networks** only.
-- For testnet deployment, set `PRIVATE_KEY` and `RPC_URL` in `.env` appropriately.
-- `node_modules/`, `.env`, `artifacts/`, and `cache/` must never be committed.
+- This is a **research-demo artifact**, not a production-ready payment or accounting system.
+- The repository targets local Hardhat networks. Mainnet or testnet deployment requires additional security review and key management.
+- The Countable Data schema is a fixed research prototype; production use would require schema versioning and governance mechanisms.
+- Privacy-preserving extensions (e.g., commitment schemes, ZK proofs over accounting fields) and broader ERP integration patterns are identified as future work in the paper.
 
 ---
 
 ## License
 
 [MIT License](LICENSE) — © 2026 Countable Coin Research
+
+---
+
+> **Korean note (한국어 요약):** 이 저장소는 *"Semantic Finality"* 논문의 재현 코드입니다. `npm install && npx hardhat test`로 즉시 실행 가능합니다.
