@@ -8,11 +8,11 @@ Conventional ERC-20 transfers provide value transfer and ownership finality, but
 
 This repository includes a minimal but reproducible implementation of:
 
-* a baseline ERC-20 transfer path
-* a wrapper-only transfer path without semantic validation
-* a minimal semantic validation path
-* an enterprise path with policy controls and signed transfer support
-* a SQLite-backed local watcher that consumes semantic transfer events
+- a baseline ERC-20 transfer path
+- a wrapper-only transfer path without semantic validation
+- a minimal semantic validation path
+- an enterprise path with policy controls and signed transfer support
+- a SQLite-backed local watcher that consumes semantic transfer events
 
 ## Core concept
 
@@ -20,24 +20,24 @@ Countable Coin introduces a fixed-length 44-byte semantic payload called **Count
 
 Payload layout:
 
-* `accountCode` — 4 bytes
-* `bookingDate` — 4 bytes
-* `taxCode` — 4 bytes
-* `documentHash` — 32 bytes
+- `accountCode` — 4 bytes
+- `bookingDate` — 4 bytes
+- `taxCode` — 4 bytes
+- `documentHash` — 32 bytes
 
 This payload is validated at execution time in the semantic transfer paths. Instead of treating a token transfer as pure value movement, the system treats it as a structured business event with machine-readable meaning.
 
 ## Repository layout
 
-* `contracts/StandardToken.sol` — baseline ERC-20 path
-* `contracts/CountableCoinWrapper.sol` — wrapper-only path without semantic validation
-* `contracts/MinimalCountableCoin.sol` — minimal semantic validation path
-* `contracts/CountableCoin.sol` — enterprise path with semantic validation, policy checks, and signed transfer support
-* `scripts/` — local deployment, setup, and emission helpers
-* `test/CountableCoin.test.js` — unit tests for the contract paths
-* `watcher/index.js` — SQLite-backed watcher for `TransferWithCD`
-* `REPRODUCIBILITY.md` — reproducibility and execution guide
-* `BENCHMARK.md` — benchmark notes and interpretation
+- `contracts/StandardToken.sol` — baseline ERC-20 path
+- `contracts/CountableCoinWrapper.sol` — wrapper-only path without semantic validation
+- `contracts/MinimalCountableCoin.sol` — minimal semantic validation path
+- `contracts/CountableCoin.sol` — enterprise path with semantic validation, policy checks, and signed transfer support
+- `scripts/` — local deployment, setup, and emission helpers
+- `test/CountableCoin.test.js` — unit tests for the contract paths
+- `watcher/index.js` — SQLite-backed watcher for `TransferWithCD`
+- `REPRODUCIBILITY.md` — reproducibility and execution guide
+- `BENCHMARK.md` — benchmark notes and interpretation
 
 ## System architecture
 
@@ -64,9 +64,9 @@ This repository intentionally keeps the watcher minimal and local. It is designe
 
 `MinimalCountableCoin` performs basic execution-time validation of the 44-byte Countable Data payload. It validates:
 
-* payload length
-* required non-zero fields
-* basic booking date validity
+- payload length
+- required non-zero fields
+- basic booking date validity
 
 It then emits a structured semantic event.
 
@@ -74,11 +74,11 @@ It then emits a structured semantic event.
 
 `CountableCoin` is the enterprise-oriented path. In addition to semantic validation, it supports:
 
-* sender allowlisting
-* allowed account code checks
-* allowed tax code checks
-* authorized signer checks
-* signed transfer flow with nonce and deadline protection
+- sender allowlisting
+- allowed account code checks
+- allowed tax code checks
+- authorized signer checks
+- signed transfer flow with nonce and deadline protection
 
 ## Execution-time validation
 
@@ -86,11 +86,11 @@ The semantic paths in this repository validate the Countable Data payload during
 
 Validation includes:
 
-* exact 44-byte payload length
-* non-zero required fields
-* simple `YYYYMMDD`-style booking date checks
-* enterprise policy checks for allowed account codes and tax codes
-* signer authorization and replay protection in the signed path
+- exact 44-byte payload length
+- non-zero required fields
+- simple `YYYYMMDD`-style booking date checks
+- enterprise policy checks for allowed account codes and tax codes
+- signer authorization and replay protection in the signed path
 
 This is the key research-demo property of the repository: the semantic layer is enforced during execution rather than added only as off-chain interpretation after settlement.
 
@@ -108,13 +108,13 @@ npx hardhat test
 
 For a step-by-step local workflow, see:
 
-* `REPRODUCIBILITY.md`
+- `REPRODUCIBILITY.md`
 
 ## Benchmark notes
 
 For benchmark interpretation and path descriptions, see:
 
-* `BENCHMARK.md`
+- `BENCHMARK.md`
 
 ## Current scope and limitations
 
@@ -122,10 +122,10 @@ This repository is a **research-demo artifact**, not a production-ready payment 
 
 Current limitations include:
 
-* minimal local watcher scope
-* no production-grade privacy layer
-* no end-to-end enterprise integration stack
-* no production hardening beyond the demo paths included here
+- minimal local watcher scope
+- no production-grade privacy layer
+- no end-to-end enterprise integration stack
+- no production hardening beyond the demo paths included here
 
 Privacy-preserving extensions, broader interoperability, and richer enterprise integrations are future work.
 

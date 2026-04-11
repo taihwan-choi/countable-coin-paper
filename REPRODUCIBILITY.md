@@ -6,9 +6,9 @@ This document explains how to reproduce the main local workflow for the Countabl
 
 Recommended environment:
 
-* Node.js
-* npm
-* local Hardhat network
+- Node.js
+- npm
+- local Hardhat network
 
 This repository is intended to be run locally for research-demo purposes.
 
@@ -57,10 +57,10 @@ npm run setup:local
 
 This script configures the local demo environment for the enterprise path, including the relevant policy state used by the repository, such as:
 
-* allowlist entries
-* allowed account codes
-* allowed tax codes
-* authorized signer configuration
+- allowlist entries
+- allowed account codes
+- allowed tax codes
+- authorized signer configuration
 
 Use the script output as the source of truth for the local setup state.
 
@@ -84,9 +84,9 @@ node watcher/index.js
 
 The watcher is a minimal local research-demo consumer. It:
 
-* listens to `TransferWithCD`
-* parses semantic event fields
-* stores them in SQLite
+- listens to `TransferWithCD`
+- parses semantic event fields
+- stores them in SQLite
 
 ## 9. Benchmark
 
@@ -98,10 +98,10 @@ If benchmark scripts are present in the repository, run them using the documente
 
 A successful local reproduction should give you the following:
 
-* contracts compile successfully
-* tests pass successfully
-* local semantic transfer emits a structured event
-* watcher records semantic event fields into SQLite
+- contracts compile successfully
+- tests pass successfully
+- local semantic transfer emits a structured event
+- watcher records semantic event fields into SQLite
 
 ## Notes
 
