@@ -216,11 +216,3 @@ All paths execute in O(1) — no unbounded loops on the transfer path.
 ## License
 
 [MIT License](LICENSE) — © 2026 Countable Coin Research
-
----
-
-## 한국어 요약
-
-이 저장소는 *"Semantic Finality: ERC-20 토큰 전송에 회계 의미를 강제하기"* 논문의 재현 코드입니다.  
-Countable Coin은 44바이트 **Countable Data** 페이로드를 ERC-20 전송에 결합하여, 실행 시점에 계정코드·날짜·세금코드·문서해시를 온체인에서 검증합니다.  
-5경로(A~E) 가스 벤치마크와 단위 테스트 15개가 포함되어 있으며, `npm install && npm test`로 즉시 실행 가능합니다.
