@@ -1,9 +1,21 @@
 require("dotenv").config();
-require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-toolbox");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.20",
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+        details: {
+          yul: true,
+        },
+      },
+      viaIR: true,
+    },
+  },
   networks: {
     hardhat: {},
     localhost: {

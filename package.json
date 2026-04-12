@@ -16,36 +16,34 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/countable-coin-paper.git"
+    "url": "git+https://github.com/taihwan-choi/countable-coin-paper.git"
   },
+  "bugs": {
+    "url": "https://github.com/taihwan-choi/countable-coin-paper/issues"
+  },
+  "homepage": "https://github.com/taihwan-choi/countable-coin-paper#readme",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
     "preinstall": "echo 'If install fails, run: npm install --legacy-peer-deps'",
-
-    "compile":       "hardhat compile",
-    "test":          "hardhat test",
-    "clean":         "hardhat clean",
-
-    "node":          "hardhat node",
-
-    "deploy:local":  "hardhat run scripts/deploy_local.js --network localhost",
-    "setup:local":   "hardhat run scripts/setup_local.js  --network localhost",
-    "emit:local":    "hardhat run scripts/emit_local.js   --network localhost",
-
-    "benchmark":     "hardhat run scripts/benchmark_table2.js --network localhost",
-    "gas:compare":   "hardhat run scripts/gas_compare.js      --network localhost",
-
-    "watcher":       "node watcher/index.js",
-    "dashboard":     "node dashboard/server.js",
-    "wallet-ui":     "node wallet-ui/server.js",
-
-    "check:repo":    "bash check_repo.sh"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "clean": "hardhat clean",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy_local.js --network localhost",
+    "setup:local": "hardhat run scripts/setup_local.js  --network localhost",
+    "emit:local": "hardhat run scripts/emit_local.js   --network localhost",
+    "benchmark": "hardhat run scripts/benchmark_table2.js --network localhost",
+    "gas:compare": "hardhat run scripts/gas_compare.js      --network localhost",
+    "watcher": "node watcher/index.js",
+    "dashboard": "node dashboard/server.js",
+    "wallet-ui": "node wallet-ui/server.js",
+    "check:repo": "bash check_repo.sh"
   },
   "devDependencies": {
-    "hardhat": "^2.28.6",
-    "@nomicfoundation/hardhat-toolbox": "^6.1.0"
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "hardhat": "^2.28.6"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0",

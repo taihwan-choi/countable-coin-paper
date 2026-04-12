@@ -8,22 +8,36 @@ async function main() {
 
   const INITIAL_SUPPLY = 1_000_000; // 1M tokens
 
-  // Deploy CountableCoin
-  const CountableCoin = await hre.ethers.getContractFactory("CountableCoin");
-  const cnc = await CountableCoin.deploy(INITIAL_SUPPLY);
-  await cnc.waitForDeployment();
-  console.log("CountableCoin deployed to:", await cnc.getAddress());
-
   // Deploy StandardToken
   const StandardToken = await hre.ethers.getContractFactory("StandardToken");
   const std = await StandardToken.deploy(INITIAL_SUPPLY);
   await std.waitForDeployment();
   console.log("StandardToken deployed to:", await std.getAddress());
 
+  // Deploy CountableCoinWrapper
+  const CountableCoinWrapper = await hre.ethers.getContractFactory("CountableCoinWrapper");
+  const wrapper = await CountableCoinWrapper.deploy();
+  await wrapper.waitForDeployment();
+  console.log("CountableCoinWrapper deployed to:", await wrapper.getAddress());
+
+  // Deploy MinimalCountableCoin
+  const MinimalCountableCoin = await hre.ethers.getContractFactory("MinimalCountableCoin");
+  const minimal = await MinimalCountableCoin.deploy();
+  await minimal.waitForDeployment();
+  console.log("MinimalCountableCoin deployed to:", await minimal.getAddress());
+
+  // Deploy CountableCoin
+  const CountableCoin = await hre.ethers.getContractFactory("CountableCoin");
+  const cnc = await CountableCoin.deploy(INITIAL_SUPPLY);
+  await cnc.waitForDeployment();
+  console.log("CountableCoin deployed to:", await cnc.getAddress());
+
   // Save addresses for other scripts
   const addresses = {
-    CountableCoin: await cnc.getAddress(),
     StandardToken: await std.getAddress(),
+    CountableCoinWrapper: await wrapper.getAddress(),
+    MinimalCountableCoin: await minimal.getAddress(),
+    CountableCoin: await cnc.getAddress(),
     deployer: deployer.address,
     network: hre.network.name,
   };

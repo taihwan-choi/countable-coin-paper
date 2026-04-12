@@ -14,7 +14,7 @@ async function main() {
   if (!fs.existsSync(addrFile)) {
     throw new Error("deployed_addresses.json not found – run deploy_local.js first");
   }
-  const { CountableCoin: cncAddr, StandardToken: stdAddr } =
+  const { CountableCoin: cncAddr, StandardToken: stdAddr, MinimalCountableCoin: minAddr, CountableCoinWrapper: wrapAddr } =
     JSON.parse(fs.readFileSync(addrFile, "utf8"));
 
   // ── Setup SQLite DB ───────────────────────────────────────────────────────
@@ -23,14 +23,17 @@ async function main() {
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS transfers (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      tx_hash     TEXT    NOT NULL,
-      block_num   INTEGER NOT NULL,
-      from_addr   TEXT    NOT NULL,
-      to_addr     TEXT    NOT NULL,
-      amount      TEXT    NOT NULL,
-      cd          TEXT,
-      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      tx_hash       TEXT    NOT NULL,
+      block_num     INTEGER NOT NULL,
+      from_addr     TEXT    NOT NULL,
+      to_addr       TEXT    NOT NULL,
+      amount        TEXT    NOT NULL,
+      account_code  INTEGER,
+      booking_date  INTEGER,
+      tax_code      INTEGER,
+      document_hash TEXT,
+      created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS gas_stats (
@@ -50,6 +53,12 @@ async function main() {
   const CountableCoin = await hre.ethers.getContractFactory("CountableCoin");
   const cnc = CountableCoin.attach(cncAddr);
 
+  const MinimalCountableCoin = await hre.ethers.getContractFactory("MinimalCountableCoin");
+  const min = MinimalCountableCoin.attach(minAddr);
+
+  const CountableCoinWrapper = await hre.ethers.getContractFactory("CountableCoinWrapper");
+  const wrap = CountableCoinWrapper.attach(wrapAddr);
+
   const StandardToken = await hre.ethers.getContractFactory("StandardToken");
   const std = StandardToken.attach(stdAddr);
 
@@ -61,11 +70,46 @@ async function main() {
   console.log(`Transferred 10,000 CNC → alice (${alice.address})`);
   console.log(`Transferred 10,000 CNC → bob   (${bob.address})`);
 
+  // Send MIN to alice and bob
+  await (await min.connect(deployer).transfer(alice.address, amount)).wait();
+  await (await min.connect(deployer).transfer(bob.address, amount)).wait();
+  console.log(`Transferred 10,000 MIN → alice (${alice.address})`);
+  console.log(`Transferred 10,000 MIN → bob   (${bob.address})`);
+
+  // Send WRAP to alice and bob
+  await (await wrap.connect(deployer).transfer(alice.address, amount)).wait();
+  await (await wrap.connect(deployer).transfer(bob.address, amount)).wait();
+  console.log(`Transferred 10,000 WRAP → alice (${alice.address})`);
+  console.log(`Transferred 10,000 WRAP → bob   (${bob.address})`);
+
   // Send STD to alice and bob
   await (await std.connect(deployer).transfer(alice.address, amount)).wait();
   await (await std.connect(deployer).transfer(bob.address, amount)).wait();
   console.log(`Transferred 10,000 STD → alice (${alice.address})`);
   console.log(`Transferred 10,000 STD → bob   (${bob.address})`);
+
+  // ── Setup CountableCoin controls ────────────────────────────────────────
+  console.log("\nSetting up CountableCoin controls…");
+
+  // Allowlist alice
+  await (await cnc.connect(deployer).setAllowlist(alice.address, true)).wait();
+  console.log("[1/4] setAllowlist(alice, true) ✅");
+
+  // Allowed account codes: 1001, 1002, 2001
+  await (await cnc.connect(deployer).setAllowedAccountCode(1001, true)).wait();
+  await (await cnc.connect(deployer).setAllowedAccountCode(1002, true)).wait();
+  await (await cnc.connect(deployer).setAllowedAccountCode(2001, true)).wait();
+  console.log("[2/4] setAllowedAccountCode: [1001, 1002, 2001] ✅");
+
+  // Allowed tax codes: 10, 20, 0
+  await (await cnc.connect(deployer).setAllowedTaxCode(10, true)).wait();
+  await (await cnc.connect(deployer).setAllowedTaxCode(20, true)).wait();
+  await (await cnc.connect(deployer).setAllowedTaxCode(0, true)).wait();
+  console.log("[3/4] setAllowedTaxCode: [10, 20, 0] ✅");
+
+  // Authorized signer: alice
+  await (await cnc.connect(deployer).setAuthorizedSigner(alice.address, true)).wait();
+  console.log("[4/4] setAuthorizedSigner(alice, true) ✅");
 
   console.log("\nSetup complete.");
 }

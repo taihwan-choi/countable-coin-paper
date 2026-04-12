@@ -31,36 +31,42 @@ async function main() {
   const db = new Database(DB_FILE);
 
   const insertTx = db.prepare(`
-    INSERT INTO transfers (tx_hash, block_num, from_addr, to_addr, amount, cd)
-    VALUES (@tx_hash, @block_num, @from_addr, @to_addr, @amount, @cd)
+    INSERT INTO transfers (tx_hash, block_num, from_addr, to_addr, amount, account_code, booking_date, tax_code, document_hash)
+    VALUES (@tx_hash, @block_num, @from_addr, @to_addr, @amount, @account_code, @booking_date, @tax_code, @document_hash)
   `);
 
   // ── CountableCoin – TransferWithCD ────────────────────────────────────────
   const cncAbi = loadABI("CountableCoin");
   const cnc = new ethers.Contract(cncAddr, cncAbi, provider);
 
-  cnc.on("TransferWithCD", (from, to, value, cd, event) => {
+  cnc.on("TransferWithCD", (from, to, value, accountCode, bookingDate, taxCode, documentHash, event) => {
     const row = {
-      tx_hash:   event.log.transactionHash,
-      block_num: event.log.blockNumber,
-      from_addr: from,
-      to_addr:   to,
-      amount:    value.toString(),
-      cd:        cd,
+      tx_hash:       event.log.transactionHash,
+      block_num:     event.log.blockNumber,
+      from_addr:     from,
+      to_addr:       to,
+      amount:        value.toString(),
+      account_code:  accountCode,
+      booking_date:  bookingDate,
+      tax_code:      taxCode,
+      document_hash: documentHash,
     };
     insertTx.run(row);
-    console.log(`[TransferWithCD] block=${row.block_num} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)} cd=${cd}`);
+    console.log(`[TransferWithCD] block=${row.block_num} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)} acc=${accountCode} date=${bookingDate} tax=${taxCode}`);
   });
 
   // ── CountableCoin – standard Transfer ────────────────────────────────────
   cnc.on("Transfer", (from, to, value, event) => {
     const row = {
-      tx_hash:   event.log.transactionHash,
-      block_num: event.log.blockNumber,
-      from_addr: from,
-      to_addr:   to,
-      amount:    value.toString(),
-      cd:        null,
+      tx_hash:       event.log.transactionHash,
+      block_num:     event.log.blockNumber,
+      from_addr:     from,
+      to_addr:       to,
+      amount:        value.toString(),
+      account_code:  null,
+      booking_date:  null,
+      tax_code:      null,
+      document_hash: null,
     };
     insertTx.run(row);
     console.log(`[Transfer/CNC] block=${row.block_num} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)}`);
@@ -72,12 +78,15 @@ async function main() {
 
   std.on("Transfer", (from, to, value, event) => {
     const row = {
-      tx_hash:   event.log.transactionHash,
-      block_num: event.log.blockNumber,
-      from_addr: from,
-      to_addr:   to,
-      amount:    value.toString(),
-      cd:        null,
+      tx_hash:       event.log.transactionHash,
+      block_num:     event.log.blockNumber,
+      from_addr:     from,
+      to_addr:       to,
+      amount:        value.toString(),
+      account_code:  null,
+      booking_date:  null,
+      tax_code:      null,
+      document_hash: null,
     };
     insertTx.run(row);
     console.log(`[Transfer/STD] block=${row.block_num} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)}`);
