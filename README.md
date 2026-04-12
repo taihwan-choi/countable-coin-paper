@@ -1,5 +1,31 @@
 # Countable Coin Paper
 
+ **Research-Demo Artifact**
+This repository is a paper-aligned PoC for Countable Coin.
+It demonstrates execution-time semantic validation and structured on-chain semantic event emission.
+It is **not** a production-ready enterprise payment platform.
+
+## Scope
+
+### What this repo demonstrates
+- 44-byte Countable Data payload parsing and execution-time semantic validation
+- Structured on-chain semantic event emission (`accountCode`, `bookingDate`, `taxCode`, `documentHash`)
+- Baseline, wrapper-only, minimal semantic, and enterprise signed paths
+- Benchmark comparisons across transfer paths
+- A local watcher pipeline with SQLite-backed storage
+
+### What this repo does not include
+- Production-grade custody or key management
+- Full ERP integration
+- Privacy-preserving deployment
+- Admin platform or management UI
+- Mainnet deployment
+
+### Current limitations
+- Local Hardhat network only
+- Research-demo admin/governance model
+- Minimal local watcher scope
+
 This repository is a reproducible research-demo artifact for **Countable Coin**, a token-layer framework that brings **execution-time semantic validation** to blockchain token transfers.
 
 Conventional ERC-20 transfers provide value transfer and ownership finality, but they do not express transaction meaning in a machine-verifiable way at execution time. Countable Coin extends this model by attaching a fixed-length **Countable Data** payload to token transfers and validating that payload during execution. The result is a structured on-chain event that can be consumed by downstream systems such as accounting, compliance, or audit-oriented processing pipelines.
