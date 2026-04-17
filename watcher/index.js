@@ -3,9 +3,11 @@
  * Listens for Transfer and TransferWithCD events on localhost
  * and writes them to the SQLite DB (events.db).
  *
- * Minimal local watcher for research-demo purposes.
- * Not intended as a production event ingestion pipeline.
  */
+// Minimal local watcher for the research-demo artifact.
+// This component demonstrates machine-readable semantic event ingestion into SQLite.
+// It is not intended to provide production-grade guarantees such as distributed ingestion,
+// reorg recovery, durable checkpoints, or multi-process exactly-once delivery.
 require("dotenv").config();
 const { ethers } = require("ethers");
 const path = require("path");

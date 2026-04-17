@@ -34,6 +34,12 @@ The signed execution path demonstrates semantic authorization and replay protect
 
 The watcher is a minimal local event consumer that demonstrates machine-readable semantic event ingestion into SQLite; it does not implement full production-grade replay, reorg, or distributed ingestion guarantees.
 
+The signed execution path is included to demonstrate semantic authorization, replay protection, and execution-time verification in a research-demo setting. It should not be interpreted as a complete production custody or enterprise key-management design.
+
+The watcher is intentionally minimal and local in scope. Its role in this repository is to demonstrate that structured semantic events can be consumed and persisted by downstream software, not to serve as a production event-processing system.
+
+Only scripts backed by files included in this public repository are exposed in `package.json`. Experimental or unpublished local utilities are intentionally omitted from the public artifact.
+
 This repository is a reproducible research-demo artifact for **Countable Coin**, a token-layer framework that brings **execution-time semantic validation** to blockchain token transfers.
 
 Conventional ERC-20 transfers provide value transfer and ownership finality, but they do not express transaction meaning in a machine-verifiable way at execution time. Countable Coin extends this model by attaching a fixed-length **Countable Data** payload to token transfers and validating that payload during execution. The result is a structured on-chain event that can be consumed by downstream systems such as accounting, compliance, or audit-oriented processing pipelines.
@@ -149,6 +155,8 @@ For a step-by-step local workflow, see:
 For the latest artifact release note, see:
 
 * [Artifact Hardening: Signer Recovery and Watcher Ingestion](https://github.com/taihwan-choi/countable-coin-paper/releases/tag/artifact-hardening-2026-04-18)
+
+Note: The `main` branch is the source of truth for the public artifact. Release notes describe changes included in the tagged artifact snapshot only after they are merged into `main`.
 
 ## Benchmark notes
 

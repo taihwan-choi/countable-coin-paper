@@ -51,6 +51,16 @@ Benchmark results should be interpreted carefully.
 
 For this reason, the benchmark should be read as a comparative research-demo measurement rather than a definitive production gas study.
 
+## Interpretation Note
+
+The benchmark results in this repository reflect the current public artifact revision and local Hardhat measurement setup.
+
+If the paper reports slightly different relative percentages, those values should be interpreted as results from the submission snapshot and controlled evaluation environment used for the manuscript.
+
+Accordingly, the public repository benchmarks should be read as reproducible artifact-level measurements, not as exact replicas of every manuscript number.
+
+All percentages are computed relative to the local Path A baseline in the current artifact revision.
+
 ## Result artifacts and scripts
 
 Use the benchmark scripts and result files currently included in the repository as the source of truth for benchmark execution and recorded outputs.

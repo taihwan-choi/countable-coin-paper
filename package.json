@@ -38,7 +38,6 @@
     "gas:compare": "hardhat run scripts/gas_compare.js      --network localhost",
     "watcher": "node watcher/index.js",
     "dashboard": "node dashboard/server.js",
-    "wallet-ui": "node wallet-ui/server.js",
     "check:repo": "bash check_repo.sh"
   },
   "devDependencies": {
