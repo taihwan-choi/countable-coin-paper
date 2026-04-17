@@ -48,6 +48,8 @@ The current repository demonstrates the following flow:
 3. The local watcher listens to that event.
 4. The watcher stores parsed event fields in SQLite.
 
+`setup:local` configures the demo policy state required for the `CountableCoin` semantic and signed paths. The watcher stores structured semantic event fields (`accountCode`, `bookingDate`, `taxCode`, `documentHash`) into SQLite.
+
 This repository intentionally keeps the watcher minimal and local. It is designed as a research-demo consumer of on-chain semantic events.
 
 ## Contract paths

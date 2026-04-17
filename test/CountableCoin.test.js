@@ -47,6 +47,33 @@ describe("CountableCoin Contracts", function () {
     await cnc.connect(deployer).setAuthorizedSigner(alice.address, true);
   });
 
+  async function signTransferWithCD(from, to, value, rawCD, nonce, deadline) {
+    const domain = {
+      name: "CountableCoin",
+      version: "1",
+      chainId: (await ethers.provider.getNetwork()).chainId,
+      verifyingContract: await cnc.getAddress(),
+    };
+    const types = {
+      TransferWithCD: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "rawCD", type: "bytes" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" },
+      ],
+    };
+    return from.signTypedData(domain, types, {
+      from: from.address,
+      to,
+      value,
+      rawCD,
+      nonce,
+      deadline,
+    });
+  }
+
   describe("StandardToken", function () {
     it("should transfer normally", async function () {
       await expect(std.connect(alice).transfer(bob.address, amount)).to.changeTokenBalances(
@@ -68,6 +95,22 @@ describe("CountableCoin Contracts", function () {
       await expect(minimal.connect(alice).transferWithCD(bob.address, amount, validCD)).to.changeTokenBalances(
         minimal, [alice, bob], [-amount, amount]
       );
+    });
+
+    it("should emit structured TransferWithCD event in MinimalCountableCoin", async function () {
+      const expectedHash = ethers.keccak256(ethers.toUtf8Bytes("test"));
+
+      await expect(minimal.connect(alice).transferWithCD(bob.address, amount, validCD))
+        .to.emit(minimal, "TransferWithCD")
+        .withArgs(
+          alice.address,
+          bob.address,
+          amount,
+          1001,
+          20250101,
+          10,
+          expectedHash
+        );
     });
 
     it("should fail with invalid length", async function () {
@@ -124,6 +167,31 @@ describe("CountableCoin Contracts", function () {
       ]);
       await expect(minimal.connect(alice).transferWithCD(bob.address, amount, badCD)).to.be.revertedWithCustomError(minimal, "HardFail").withArgs("bookingDate invalid");
     });
+
+    it("should accept leap day for leap year", async function () {
+      const leapCD = ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(1001), 4),
+        ethers.zeroPadValue(ethers.toBeHex(20240229), 4),
+        ethers.zeroPadValue(ethers.toBeHex(10), 4),
+        ethers.keccak256(ethers.toUtf8Bytes("leap")),
+      ]);
+
+      await expect(minimal.connect(alice).transferWithCD(bob.address, amount, leapCD))
+        .to.changeTokenBalances(minimal, [alice, bob], [-amount, amount]);
+    });
+
+    it("should reject Feb 29 on non-leap year", async function () {
+      const badCD = ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(1001), 4),
+        ethers.zeroPadValue(ethers.toBeHex(20230229), 4),
+        ethers.zeroPadValue(ethers.toBeHex(10), 4),
+        ethers.keccak256(ethers.toUtf8Bytes("bad")),
+      ]);
+
+      await expect(minimal.connect(alice).transferWithCD(bob.address, amount, badCD))
+        .to.be.revertedWithCustomError(minimal, "HardFail")
+        .withArgs("bookingDate invalid");
+    });
   });
 
   describe("CountableCoin", function () {
@@ -131,6 +199,22 @@ describe("CountableCoin Contracts", function () {
       await expect(cnc.connect(alice).transferWithCD(bob.address, amount, validCD)).to.changeTokenBalances(
         cnc, [alice, bob], [-amount, amount]
       );
+    });
+
+    it("should emit structured TransferWithCD event in CountableCoin", async function () {
+      const expectedHash = ethers.keccak256(ethers.toUtf8Bytes("test"));
+
+      await expect(cnc.connect(alice).transferWithCD(bob.address, amount, validCD))
+        .to.emit(cnc, "TransferWithCD")
+        .withArgs(
+          alice.address,
+          bob.address,
+          amount,
+          1001,
+          20250101,
+          10,
+          expectedHash
+        );
     });
 
     it("should fail with disallowed sender", async function () {
@@ -187,6 +271,30 @@ describe("CountableCoin Contracts", function () {
       await expect(cnc.connect(deployer).transferWithCDSigned(alice.address, bob.address, amount, validCD, deadline, sig)).to.changeTokenBalances(
         cnc, [alice, bob], [-amount, amount]
       );
+    });
+
+    it("should increment nonce after signed transfer", async function () {
+      const nonceBefore = await cnc.nonces(alice.address);
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const sig = await signTransferWithCD(
+        alice,
+        bob.address,
+        amount,
+        validCD,
+        nonceBefore,
+        deadline
+      );
+
+      await cnc.connect(deployer).transferWithCDSigned(
+        alice.address,
+        bob.address,
+        amount,
+        validCD,
+        deadline,
+        sig
+      );
+
+      expect(await cnc.nonces(alice.address)).to.equal(nonceBefore + 1n);
     });
 
     it("should fail with unauthorized signer", async function () {

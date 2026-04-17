@@ -110,9 +110,19 @@ async function main() {
   await (await cnc.connect(deployer).transfer(alice.address, topUp)).wait();
   console.log("Alice funded on all contracts ✓");
 
-  // Allowlist alice for CountableCoin (Paths D/E)
+  // Configure CountableCoin policy state for Paths D/E.
   await (await cnc.connect(deployer).setAllowlist(alice.address, true)).wait();
-  console.log("Alice allowlisted on CountableCoin ✓\n");
+  await (await cnc.connect(deployer).setAllowedAccountCode(1, true)).wait();
+  await (await cnc.connect(deployer).setAllowedTaxCode(1, true)).wait();
+  await (await cnc.connect(deployer).setAuthorizedSigner(alice.address, true)).wait();
+  console.log("CountableCoin policy state configured for benchmark ✓");
+
+  console.log("Benchmark policy:");
+  console.log(" allowlist(alice) =", await cnc.allowlist(alice.address));
+  console.log(" allowedAccountCode(1) =", await cnc.allowedAccountCode(1));
+  console.log(" allowedTaxCode(1) =", await cnc.allowedTaxCode(1));
+  console.log(" authorizedSigner(alice) =", await cnc.authorizedSigner(alice.address));
+  console.log();
 
   // ── EIP-712 domain ────────────────────────────────────────────────────────
   const network = await hre.ethers.provider.getNetwork();
