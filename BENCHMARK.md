@@ -15,6 +15,8 @@ The benchmark is intended to compare the relative gas overhead of different tran
 
 The goal is not to claim a production gas model, but to show how semantic validation and policy enforcement affect execution cost in a controlled research-demo setting.
 
+All measurements are relative local comparisons in a controlled Hardhat environment and should be interpreted as prototype-level evaluation results, not definitive production benchmarks.
+
 ## Path definitions
 
 ### Baseline ERC-20 path

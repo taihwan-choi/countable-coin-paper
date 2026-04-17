@@ -9,7 +9,7 @@
  *   (B) CountableCoinWrapper.transferWithCD()  – calldata passthrough, no semantic
  *   (C) MinimalCountableCoin.transferWithCD()  – semantic validation + event, no allowlist/EIP-712
  *   (D) CountableCoin.transferWithCD()         – semantic + allowlist check
- *   (E) CountableCoin.transferWithCDSigned()   – semantic + allowlist + EIP-712 ecrecover + nonce
+ *   (E) CountableCoin.transferWithCDSigned()   – semantic + allowlist + EIP-712 signature + nonce
  *
  * Payload: 44-byte countable-data (accountCode|bookingDate|taxCode|documentHash)
  */
@@ -135,6 +135,11 @@ async function main() {
 
   // ── Benchmarks ────────────────────────────────────────────────────────────
   console.log(`=== Table II: Gas by Transfer Path (${RUNS} runs each) ===\n`);
+  console.log("Path A  Standard ERC-20 baseline");
+  console.log("Path B  Wrapper-only semantic carrying");
+  console.log("Path C  Validated semantic path");
+  console.log("Path D  Enterprise policy-gated path");
+  console.log("Path E  Signed enterprise path\n");
 
   const rawData = [];
 
@@ -162,7 +167,7 @@ async function main() {
     return (await tx.wait()).gasUsed;
   }, rawData);
 
-  // (E) CNC.transferWithCDSigned — EIP-712 + nonce + ecrecover
+  // (E) CNC.transferWithCDSigned — EIP-712 + nonce + signature recovery
   const avgE = await bench("(E) CNC.transferWithCDSigned", RUNS, async (i) => {
     const nonce    = await cnc.nonces(alice.address);
     const deadline = Math.floor(Date.now() / 1000) + 3600;

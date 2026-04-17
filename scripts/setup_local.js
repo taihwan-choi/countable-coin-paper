@@ -27,6 +27,7 @@ async function main() {
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       tx_hash         TEXT    NOT NULL,
       block_num       INTEGER NOT NULL,
+      log_index       INTEGER NOT NULL DEFAULT 0,
       source_contract TEXT    NOT NULL,
       event_type      TEXT    NOT NULL,
       from_addr       TEXT    NOT NULL,
@@ -46,14 +47,24 @@ async function main() {
       gas_used    INTEGER NOT NULL,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS sync_meta (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
   `);
 
   const transferColumns = db.prepare("PRAGMA table_info(transfers)").all().map((col) => col.name);
   const addColumn = (name, ddl) => {
     if (!transferColumns.includes(name)) {
       db.exec(`ALTER TABLE transfers ADD COLUMN ${name} ${ddl}`);
+      return true;
     }
+    return false;
   };
+  const addedLogIndex = addColumn("log_index", "INTEGER NOT NULL DEFAULT 0");
   addColumn("source_contract", "TEXT NOT NULL DEFAULT 'Unknown'");
   addColumn("event_type", "TEXT NOT NULL DEFAULT 'Transfer'");
   addColumn("account_code", "INTEGER");
@@ -61,6 +72,15 @@ async function main() {
   addColumn("tax_code", "INTEGER");
   addColumn("document_hash", "TEXT");
   addColumn("raw_cd", "TEXT");
+
+  if (addedLogIndex) {
+    db.exec("UPDATE transfers SET log_index = id WHERE log_index = 0");
+  }
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_transfers_txlog
+    ON transfers (tx_hash, log_index);
+  `);
 
   console.log("SQLite DB initialised:", dbPath);
   db.close();

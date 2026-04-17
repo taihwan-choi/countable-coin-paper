@@ -2,6 +2,9 @@
  * watcher/index.js
  * Listens for Transfer and TransferWithCD events on localhost
  * and writes them to the SQLite DB (events.db).
+ *
+ * Minimal local watcher for research-demo purposes.
+ * Not intended as a production event ingestion pipeline.
  */
 require("dotenv").config();
 const { ethers } = require("ethers");
@@ -30,17 +33,52 @@ async function main() {
   const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
   const db = new Database(DB_FILE);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sync_meta (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_transfers_txlog
+    ON transfers (tx_hash, log_index);
+  `);
+
   const insertTx = db.prepare(`
-    INSERT INTO transfers (
-      tx_hash, block_num, source_contract, event_type,
+    INSERT OR IGNORE INTO transfers (
+      tx_hash, block_num, log_index, source_contract, event_type,
       from_addr, to_addr, amount,
       account_code, booking_date, tax_code, document_hash, raw_cd
     ) VALUES (
-      @tx_hash, @block_num, @source_contract, @event_type,
+      @tx_hash, @block_num, @log_index, @source_contract, @event_type,
       @from_addr, @to_addr, @amount,
       @account_code, @booking_date, @tax_code, @document_hash, @raw_cd
     )
   `);
+
+  const updateLastProcessedBlock = db.prepare(`
+    INSERT INTO sync_meta (key, value, updated_at)
+    VALUES ('last_processed_block', @block_num, CURRENT_TIMESTAMP)
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+
+  const lastProcessedBlock = db
+    .prepare("SELECT value FROM sync_meta WHERE key = 'last_processed_block'")
+    .get();
+
+  function logIndex(event) {
+    return Number(event.log.index ?? event.log.logIndex ?? 0);
+  }
+
+  function insertEvent(row) {
+    const result = insertTx.run(row);
+    if (result.changes > 0) {
+      updateLastProcessedBlock.run({ block_num: String(row.block_num) });
+    }
+    return result.changes > 0;
+  }
 
   // ── CountableCoin – TransferWithCD ────────────────────────────────────────
   const cncAbi = loadABI("CountableCoin");
@@ -52,6 +90,7 @@ async function main() {
       const row = {
         tx_hash: event.log.transactionHash,
         block_num: event.log.blockNumber,
+        log_index: logIndex(event),
         source_contract: "CountableCoin",
         event_type: "TransferWithCD",
         from_addr: from,
@@ -63,10 +102,11 @@ async function main() {
         document_hash: documentHash,
         raw_cd: null,
       };
-      insertTx.run(row);
-      console.log(
-        `[TransferWithCD] block=${row.block_num} acct=${row.account_code} date=${row.booking_date} tax=${row.tax_code}`
-      );
+      if (insertEvent(row)) {
+        console.log(
+          `[TransferWithCD] block=${row.block_num} log=${row.log_index} acct=${row.account_code} date=${row.booking_date} tax=${row.tax_code}`
+        );
+      }
     }
   );
 
@@ -75,6 +115,7 @@ async function main() {
     const row = {
       tx_hash: event.log.transactionHash,
       block_num: event.log.blockNumber,
+      log_index: logIndex(event),
       source_contract: "CountableCoin",
       event_type: "Transfer",
       from_addr: from,
@@ -86,8 +127,9 @@ async function main() {
       document_hash: null,
       raw_cd: null,
     };
-    insertTx.run(row);
-    console.log(`[Transfer/CNC] block=${row.block_num} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)}`);
+    if (insertEvent(row)) {
+      console.log(`[Transfer/CNC] block=${row.block_num} log=${row.log_index} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)}`);
+    }
   });
 
   // ── StandardToken – Transfer ──────────────────────────────────────────────
@@ -98,6 +140,7 @@ async function main() {
     const row = {
       tx_hash: event.log.transactionHash,
       block_num: event.log.blockNumber,
+      log_index: logIndex(event),
       source_contract: "StandardToken",
       event_type: "Transfer",
       from_addr: from,
@@ -109,13 +152,15 @@ async function main() {
       document_hash: null,
       raw_cd: null,
     };
-    insertTx.run(row);
-    console.log(`[Transfer/STD] block=${row.block_num} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)}`);
+    if (insertEvent(row)) {
+      console.log(`[Transfer/STD] block=${row.block_num} log=${row.log_index} from=${from.slice(0,8)}… to=${to.slice(0,8)}… amt=${ethers.formatUnits(value,18)}`);
+    }
   });
 
   console.log("Watcher started. Listening on http://127.0.0.1:8545 …");
   console.log("  CountableCoin :", cncAddr);
   console.log("  StandardToken :", stdAddr);
+  console.log("  Last processed block :", lastProcessedBlock?.value ?? "none");
 }
 
 main().catch((err) => {

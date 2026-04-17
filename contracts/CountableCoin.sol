@@ -2,9 +2,12 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 // ── Path D/E: Full CountableCoin (allowlist + EIP-712) ────────────────────────
+/// @dev Signed path is implemented for research-demo evaluation, not as a full production custody module.
 contract CountableCoin is ERC20 {
+    using ECDSA for bytes32;
 
     uint256 public constant RAW_CD_SIZE = 44;
 
@@ -147,8 +150,7 @@ contract CountableCoin is ERC20 {
         bytes32 digest = keccak256(
             abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash)
         );
-
-        address signer = _recoverSigner(digest, sig);
+        address signer = digest.recoverCalldata(sig);
         if (!authorizedSigner[signer]) revert InvalidSignature();
 
         _transfer(from, to, value);
@@ -193,19 +195,4 @@ contract CountableCoin is ERC20 {
         return day <= maxDay;
     }
 
-    function _recoverSigner(
-        bytes32        digest,
-        bytes calldata sig
-    ) internal pure returns (address) {
-        require(sig.length == 65, "CountableCoin: bad sig length");
-        bytes32 r;
-        bytes32 s;
-        uint8   v;
-        assembly {
-            r := calldataload(sig.offset)
-            s := calldataload(add(sig.offset, 32))
-            v := byte(0, calldataload(add(sig.offset, 64)))
-        }
-        return ecrecover(digest, v, r, s);
-    }
 }

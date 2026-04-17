@@ -26,6 +26,14 @@ It is **not** a production-ready enterprise payment platform.
 - Research-demo admin/governance model
 - Minimal local watcher scope
 
+## Scope Notes
+
+This repository is a research-demo artifact aligned to the paper, not a production payment system.
+
+The signed execution path demonstrates semantic authorization and replay protection for evaluation purposes; it is not intended to represent a complete production custody or key-management design.
+
+The watcher is a minimal local event consumer that demonstrates machine-readable semantic event ingestion into SQLite; it does not implement full production-grade replay, reorg, or distributed ingestion guarantees.
+
 This repository is a reproducible research-demo artifact for **Countable Coin**, a token-layer framework that brings **execution-time semantic validation** to blockchain token transfers.
 
 Conventional ERC-20 transfers provide value transfer and ownership finality, but they do not express transaction meaning in a machine-verifiable way at execution time. Countable Coin extends this model by attaching a fixed-length **Countable Data** payload to token transfers and validating that payload during execution. The result is a structured on-chain event that can be consumed by downstream systems such as accounting, compliance, or audit-oriented processing pipelines.
