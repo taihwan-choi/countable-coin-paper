@@ -62,6 +62,7 @@ This script configures the local demo environment for the enterprise path, inclu
 * allowed account codes
 * allowed tax codes
 * authorized signer configuration
+* semantic demo defaults written to `deployed_addresses.json`
 
 Use the script output as the source of truth for the local setup state.
 
@@ -86,8 +87,8 @@ node watcher/index.js
 The watcher is a minimal local research-demo consumer. It:
 
 * listens to `TransferWithCD`
-* parses semantic event fields
-* stores them in SQLite
+* parses structured semantic event fields from the on-chain event
+* stores `accountCode`, `bookingDate`, `taxCode`, and `documentHash` in SQLite
 
 ## 9. Benchmark
 

@@ -37,6 +37,8 @@ This path is provided by `CountableCoin`. It includes semantic validation plus e
 
 Where measured separately, this path includes signed transfer support with signer authorization, nonce handling, and deadline enforcement in addition to semantic validation and policy checks.
 
+Paths D/E are measured after demo policy configuration: allowlisted sender, allowed account/tax codes, and authorized signer.
+
 ## Interpretation
 
 Benchmark results should be interpreted carefully.
