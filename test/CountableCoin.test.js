@@ -95,6 +95,26 @@ describe("CountableCoin Contracts", function () {
       await expect(minimal.connect(alice).transferWithCD(bob.address, amount, badCD)).to.be.revertedWithCustomError(minimal, "HardFail").withArgs("bookingDate missing");
     });
 
+    it("should fail with missing taxCode", async function () {
+      const badCD = ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(1001), 4),
+        ethers.zeroPadValue(ethers.toBeHex(20250101), 4),
+        ethers.zeroPadValue(ethers.toBeHex(0), 4),
+        ethers.keccak256(ethers.toUtf8Bytes("test")),
+      ]);
+      await expect(minimal.connect(alice).transferWithCD(bob.address, amount, badCD)).to.be.revertedWithCustomError(minimal, "HardFail").withArgs("taxCode missing");
+    });
+
+    it("should fail with missing documentHash", async function () {
+      const badCD = ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(1001), 4),
+        ethers.zeroPadValue(ethers.toBeHex(20250101), 4),
+        ethers.zeroPadValue(ethers.toBeHex(10), 4),
+        ethers.zeroPadValue(ethers.toBeHex(0), 32),
+      ]);
+      await expect(minimal.connect(alice).transferWithCD(bob.address, amount, badCD)).to.be.revertedWithCustomError(minimal, "HardFail").withArgs("documentHash missing");
+    });
+
     it("should fail with invalid date", async function () {
       const badCD = ethers.concat([
         ethers.zeroPadValue(ethers.toBeHex(1001), 4),
@@ -227,6 +247,75 @@ describe("CountableCoin Contracts", function () {
         deadline,
       });
       await expect(cnc.connect(deployer).transferWithCDSigned(alice.address, bob.address, amount, validCD, deadline, sig)).to.be.revertedWithCustomError(cnc, "DeadlineExpired");
+    });
+
+    it("should reject payload with wrong length before any policy check (enterprise path enforces semantic validation)", async function () {
+      const shortCD = ethers.randomBytes(32);
+      await expect(
+        cnc.connect(alice).transferWithCD(bob.address, amount, shortCD)
+      ).to.be.revertedWithCustomError(cnc, "InvalidPayloadLength");
+    });
+
+    it("should reject zero accountCode via semantic validation, not policy check (enterprise path)", async function () {
+      const badCD = ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(0), 4),
+        ethers.zeroPadValue(ethers.toBeHex(20250101), 4),
+        ethers.zeroPadValue(ethers.toBeHex(10), 4),
+        ethers.keccak256(ethers.toUtf8Bytes("test")),
+      ]);
+      await expect(
+        cnc.connect(alice).transferWithCD(bob.address, amount, badCD)
+      ).to.be.revertedWithCustomError(cnc, "AccountCodeMissing");
+    });
+
+    it("should reject invalid booking date via semantic validation in enterprise path", async function () {
+      const badCD = ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(1001), 4),
+        ethers.zeroPadValue(ethers.toBeHex(20251301), 4),
+        ethers.zeroPadValue(ethers.toBeHex(10), 4),
+        ethers.keccak256(ethers.toUtf8Bytes("test")),
+      ]);
+      await expect(
+        cnc.connect(alice).transferWithCD(bob.address, amount, badCD)
+      ).to.be.revertedWithCustomError(cnc, "BookingDateInvalid");
+    });
+
+    it("should reject signed transfer carrying a semantically invalid payload", async function () {
+      const badCD = ethers.concat([
+        ethers.zeroPadValue(ethers.toBeHex(1001), 4),
+        ethers.zeroPadValue(ethers.toBeHex(20251301), 4),
+        ethers.zeroPadValue(ethers.toBeHex(10), 4),
+        ethers.keccak256(ethers.toUtf8Bytes("test")),
+      ]);
+      const nonce = await cnc.nonces(alice.address);
+      const deadline = Math.floor(Date.now() / 1000) + 3600;
+      const domain = {
+        name: "CountableCoin",
+        version: "1",
+        chainId: (await ethers.provider.getNetwork()).chainId,
+        verifyingContract: await cnc.getAddress(),
+      };
+      const types = {
+        TransferWithCD: [
+          { name: "from", type: "address" },
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "rawCD", type: "bytes" },
+          { name: "nonce", type: "uint256" },
+          { name: "deadline", type: "uint256" },
+        ],
+      };
+      const sig = await alice.signTypedData(domain, types, {
+        from: alice.address,
+        to: bob.address,
+        value: amount,
+        rawCD: badCD,
+        nonce,
+        deadline,
+      });
+      await expect(
+        cnc.connect(deployer).transferWithCDSigned(alice.address, bob.address, amount, badCD, deadline, sig)
+      ).to.be.revertedWithCustomError(cnc, "BookingDateInvalid");
     });
 
     it("should fail with replayed nonce", async function () {

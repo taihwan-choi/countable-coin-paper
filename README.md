@@ -52,15 +52,27 @@ This repository intentionally keeps the watcher minimal and local. It is designe
 
 ## Contract paths
 
-### 1. StandardToken
+The five paths map to benchmark labels A through E as follows:
+
+| Benchmark label | Contract               | Entry-point          |
+|-----------------|------------------------|----------------------|
+| Path A          | `StandardToken`        | `transfer`           |
+| Path B          | `CountableCoinWrapper` | `transferWithCD`     |
+| Path C          | `MinimalCountableCoin` | `transferWithCD`     |
+| Path D          | `CountableCoin`        | `transferWithCD`     |
+| Path E          | `CountableCoin`        | `transferWithCDSigned` |
+
+Paths C, D, and E all perform execution-time semantic validation of the 44-byte Countable Data payload. Paths D and E additionally enforce enterprise policy checks. See `BENCHMARK.md` for path-level gas measurements and overhead breakdown.
+
+### 1. StandardToken (Path A)
 
 `StandardToken` is the plain ERC-20 baseline path. It is included to provide a simple comparison point for gas and behavior.
 
-### 2. CountableCoinWrapper
+### 2. CountableCoinWrapper (Path B)
 
 `CountableCoinWrapper` is a wrapper-only path. It demonstrates the cost of a wrapper-style interface without semantic validation.
 
-### 3. MinimalCountableCoin
+### 3. MinimalCountableCoin (Path C)
 
 `MinimalCountableCoin` performs basic execution-time validation of the 44-byte Countable Data payload. It validates:
 
@@ -70,9 +82,9 @@ This repository intentionally keeps the watcher minimal and local. It is designe
 
 It then emits a structured semantic event.
 
-### 4. CountableCoin
+### 4. CountableCoin (Paths D and E)
 
-`CountableCoin` is the enterprise-oriented path. In addition to semantic validation, it supports:
+`CountableCoin` is the enterprise-oriented path. It performs the same 44-byte semantic validation as Path C, and additionally supports:
 
 - sender allowlisting
 - allowed account code checks

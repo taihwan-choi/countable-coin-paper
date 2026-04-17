@@ -17,23 +17,33 @@ The goal is not to claim a production gas model, but to show how semantic valida
 
 ## Path definitions
 
-### Baseline ERC-20 path
+The five benchmark paths correspond to the contract labels used in the source code as follows:
+
+| Label in contracts | Benchmark path name     | Contract / entry-point                  |
+|--------------------|-------------------------|-----------------------------------------|
+| (Path A)           | Baseline ERC-20         | `StandardToken`                         |
+| (Path B)           | Wrapper-only            | `CountableCoinWrapper`                  |
+| Path C             | Minimal semantic        | `MinimalCountableCoin.transferWithCD`   |
+| Path D             | Enterprise semantic     | `CountableCoin.transferWithCD`          |
+| Path E             | Signed enterprise       | `CountableCoin.transferWithCDSigned`    |
+
+### Baseline ERC-20 path (Path A)
 
 This is the plain token transfer path provided by `StandardToken`. It is the reference point for comparison.
 
-### Wrapper-only path
+### Wrapper-only path (Path B)
 
 This path is provided by `CountableCoinWrapper`. It introduces wrapper-level transfer handling without semantic validation.
 
-### Minimal semantic path
+### Minimal semantic path (Path C)
 
 This path is provided by `MinimalCountableCoin`. It validates the fixed-length Countable Data payload and emits a structured semantic event.
 
-### Enterprise semantic path
+### Enterprise semantic path (Path D)
 
 This path is provided by `CountableCoin`. It includes semantic validation plus enterprise policy checks such as sender allowlisting and allowed code validation.
 
-### Signed enterprise path
+### Signed enterprise path (Path E)
 
 Where measured separately, this path includes signed transfer support with signer authorization, nonce handling, and deadline enforcement in addition to semantic validation and policy checks.
 
