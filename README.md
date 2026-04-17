@@ -1,5 +1,31 @@
 # Countable Coin Paper
 
+ **Research-Demo Artifact**
+This repository is a paper-aligned PoC for Countable Coin.
+It demonstrates execution-time semantic validation and structured on-chain semantic event emission.
+It is **not** a production-ready enterprise payment platform.
+
+## Scope
+
+### What this repo demonstrates
+- 44-byte Countable Data payload parsing and execution-time semantic validation
+- Structured on-chain semantic event emission (`accountCode`, `bookingDate`, `taxCode`, `documentHash`)
+- Baseline, wrapper-only, minimal semantic, and enterprise signed paths
+- Benchmark comparisons across transfer paths
+- A local watcher pipeline with SQLite-backed storage
+
+### What this repo does not include
+- Production-grade custody or key management
+- Full ERP integration
+- Privacy-preserving deployment
+- Admin platform or management UI
+- Mainnet deployment
+
+### Current limitations
+- Local Hardhat network only
+- Research-demo admin/governance model
+- Minimal local watcher scope
+
 This repository is a reproducible research-demo artifact for **Countable Coin**, a token-layer framework that brings **execution-time semantic validation** to blockchain token transfers.
 
 Conventional ERC-20 transfers provide value transfer and ownership finality, but they do not express transaction meaning in a machine-verifiable way at execution time. Countable Coin extends this model by attaching a fixed-length **Countable Data** payload to token transfers and validating that payload during execution. The result is a structured on-chain event that can be consumed by downstream systems such as accounting, compliance, or audit-oriented processing pipelines.
@@ -54,27 +80,15 @@ This repository intentionally keeps the watcher minimal and local. It is designe
 
 ## Contract paths
 
-The five paths map to benchmark labels A through E as follows:
-
-| Benchmark label | Contract               | Entry-point          |
-|-----------------|------------------------|----------------------|
-| Path A          | `StandardToken`        | `transfer`           |
-| Path B          | `CountableCoinWrapper` | `transferWithCD`     |
-| Path C          | `MinimalCountableCoin` | `transferWithCD`     |
-| Path D          | `CountableCoin`        | `transferWithCD`     |
-| Path E          | `CountableCoin`        | `transferWithCDSigned` |
-
-Paths C, D, and E all perform execution-time semantic validation of the 44-byte Countable Data payload. Paths D and E additionally enforce enterprise policy checks. See `BENCHMARK.md` for path-level gas measurements and overhead breakdown.
-
-### 1. StandardToken (Path A)
+### 1. StandardToken
 
 `StandardToken` is the plain ERC-20 baseline path. It is included to provide a simple comparison point for gas and behavior.
 
-### 2. CountableCoinWrapper (Path B)
+### 2. CountableCoinWrapper
 
 `CountableCoinWrapper` is a wrapper-only path. It demonstrates the cost of a wrapper-style interface without semantic validation.
 
-### 3. MinimalCountableCoin (Path C)
+### 3. MinimalCountableCoin
 
 `MinimalCountableCoin` performs basic execution-time validation of the 44-byte Countable Data payload. It validates:
 
@@ -84,9 +98,9 @@ Paths C, D, and E all perform execution-time semantic validation of the 44-byte 
 
 It then emits a structured semantic event.
 
-### 4. CountableCoin (Paths D and E)
+### 4. CountableCoin
 
-`CountableCoin` is the enterprise-oriented path. It performs the same 44-byte semantic validation as Path C, and additionally supports:
+`CountableCoin` is the enterprise-oriented path. In addition to semantic validation, it supports:
 
 - sender allowlisting
 - allowed account code checks
