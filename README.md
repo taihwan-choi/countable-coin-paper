@@ -146,9 +146,9 @@ For a step-by-step local workflow, see:
 
 * `REPRODUCIBILITY.md`
 
-For the latest artifact update note, see:
+For the latest artifact release note, see:
 
-* [Artifact Update: Semantic Policy and Watcher Alignment](https://github.com/taihwan-choi/countable-coin-paper/releases/tag/artifact-update-2026-04-18)
+* [Artifact Hardening: Signer Recovery and Watcher Ingestion](https://github.com/taihwan-choi/countable-coin-paper/releases/tag/artifact-hardening-2026-04-18)
 
 ## Benchmark notes
 
